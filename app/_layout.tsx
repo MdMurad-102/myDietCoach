@@ -1,29 +1,24 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { Stack } from "expo-router";
+import { useState } from "react";
+import { UserContext, UserType } from "../context/UserContext";
+import { Id } from "@/convex/_generated/dataModel";
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+// Initialize Convex client
+const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
+  unsavedChangesWarning: false,
+});
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
+  const [user, setUser] = useState<UserType>(null);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ConvexProvider client={convex}>
+      <UserContext.Provider value={{ user, setUser }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+        </Stack>
+      </UserContext.Provider>
+    </ConvexProvider>
   );
 }
