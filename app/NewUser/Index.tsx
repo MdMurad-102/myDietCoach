@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { CalculateCalories } from "@/service/AiModel";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
+import { router } from "expo-router";
 import { useContext, useState } from "react";
 import {
   Alert,
@@ -15,7 +16,6 @@ import {
 } from "react-native";
 import Button from "../components/Button";
 import Input from "./Input";
-import { router } from "expo-router";
 
 export default function Index() {
   const [gender, setGender] = useState("");
@@ -42,6 +42,7 @@ export default function Index() {
       Alert.alert("Please enter a valid age between 10 and 110.");
       return;
     }
+
     const data = {
       id: user?._id,
       weight: weight,
@@ -50,25 +51,24 @@ export default function Index() {
       gender: gender,
       goal: goal,
     };
-    console.log(data);
-    //  const generateMealPlan = useMutation(api.MealPlan.generateMealPlan);
-    //  const result = await generateMealPlan({ prompt: "Make a 7-day diet for 1500 kcal/day" });
 
     const PROMPT = JSON.stringify(data) + Prom.CALORIESANDPRO;
     const AiCalculate = await CalculateCalories(PROMPT);
-    // console.log(AiCalculate.choices[0].message.content);
-    const AIResult = AiCalculate.choices[0].message.content;
+    const AIResult = AiCalculate;
+
     let removeJso = null;
     if (AIResult) {
       removeJso = JSON.parse(
-        AIResult.replace('```json', ' ').replace('```', ' ')
+        AIResult.replace("```json", " ").replace("```", " ")
       );
     } else {
       Alert.alert("AI result is missing or invalid.");
       return;
     }
-    console.log(removeJso);
+    console.log("AI Result:", removeJso);
+    console.log(user) ;
     const { calories, proteins } = removeJso;
+
     if (!user?._id) {
       Alert.alert("User ID is missing. Make sure user is logged in.");
       return;
@@ -97,7 +97,8 @@ export default function Index() {
         proteins,
       });
 
-      Alert.alert("Success", "Preferences updated successfully!");
+      // Navigate directly without alert
+      router.replace("/(tabs)/Home");
     } catch (err) {
       console.error("Update failed", err);
       Alert.alert("Error", "Failed to update preferences.");

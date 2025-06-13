@@ -4,6 +4,7 @@ export default defineSchema({
      Users:defineTable({
         name:v.string() ,
         email:v.string() ,
+
         picture:v.optional(v.string()), 
         subscriptionId:v.optional(v.string()),
        credit: v.optional(v.number()) ,
@@ -14,5 +15,9 @@ export default defineSchema({
        age:v.optional(v.string()),
        calories:v.optional(v.number()) ,
        proteins:v.optional(v.number())
-     })
+     }),
+     Recipes:defineTable({
+        jsonData: v.any(),
+        userId:v.id("Users"),
+     }),
 })

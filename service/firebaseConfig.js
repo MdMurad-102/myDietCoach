@@ -17,11 +17,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-const auth =
-  Platform.OS === 'web'
-    ? getAuth(app)
-    : initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage),
-      });
+let auth;
 
+if (Platform.OS === "web") {
+  auth = getAuth(app);
+} else {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
 export { app, auth };

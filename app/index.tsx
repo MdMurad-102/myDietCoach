@@ -31,13 +31,13 @@ export default function Index() {
         _id: userData._id,
         name: userData.name,
         email: userData.email,
-        weight: userData.weight ?? "0",
+        weight: userData.weight ,
         height: userData.height,
         gender: userData.gender,
         goal: userData.goal,
         age: userData.age,
-        calories: userData.calories ?? 0,
-        proteins: userData.proteins ?? 0,
+        calories: userData.calories,
+        proteins: userData.proteins
       });
       router.replace('/(tabs)/Home');
     }

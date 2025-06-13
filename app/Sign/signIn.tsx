@@ -21,33 +21,41 @@ export default function SignIn() {
   const convex = useConvex();
   const context = useContext(UserContext);
 
-  if (!context) {
+  if (!context)
     throw new Error("UserContext must be used within a UserProvider");
-  }
+  const { setUser } = context;
 
-  const { user, setUser } = context;
   const onSignIn = () => {
     if (!email || !password) {
       Alert.alert("Enter Correct email or password");
       return;
     }
+
     signInWithEmailAndPassword(auth, email, password)
       .then(async (userCredential) => {
-        const user = userCredential.user;
+        const firebaseUser = userCredential.user;
 
+        // Fetch full user from Convex
         const userData = await convex.query(api.Users.GetUser, {
           email: email,
         });
 
-        console.log("User data from Convex:", userData);
-        setUser({
-          _id: userData._id,
-          name: userData.name,
-          email: userData.email,
-        });
+        if (!userData) {
+          Alert.alert("User not found in Convex");
+          return;
+        }
+
+        // ✅ Fully load into UserContext
+        setUser(userData);
 
         Alert.alert("Login Successful");
-        router.push("/(tabs)/Home"); // navigate to homepage or dashboard
+
+        // ✅ Navigation happens after setting UserContext
+        if (!userData.height) {
+          router.replace("/NewUser/Index");
+        } else {
+          router.replace("/(tabs)/Home");
+        }
       })
       .catch((error) => {
         console.error("Login error:", error.message);
@@ -55,9 +63,7 @@ export default function SignIn() {
       });
   };
 
-  const showOrNot = () => {
-    setshowpassword((prev) => !prev);
-  };
+  const showOrNot = () => setshowpassword((prev) => !prev);
 
   return (
     <View style={styles.container}>

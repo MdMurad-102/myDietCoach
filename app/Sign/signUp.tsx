@@ -53,10 +53,6 @@ export default function SignUp() {
               _id: result._id,
               name: result.name,
               email: result.email,
-              weight: result.weight,
-              height: result.height,
-              gender: result.gender,
-              goal: result.goal,
             });
           } else {
             // If result does not have _id, set user to null (or handle error accordingly)
