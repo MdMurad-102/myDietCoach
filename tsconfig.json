@@ -3,15 +3,21 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "convex/schema.ts", "service/firebaseConfig.js", "app/components/Button.tsx", "app/Sign/signIn.tsx", "app/Sign/signUp.tsx", "app/_layout.tsx", "app/index.tsx", "context/UserContext.tsx"  ]
+    "expo-env.d.ts",
+    "convex/schema.ts",
+    "service/firebaseConfig.ts",
+    "app/components/Button.tsx",
+    "app/Sign/SignIn.tsx",
+    "app/Sign/SignUp.tsx",
+    "app/_layout.tsx",
+    "app/index.tsx",
+    "context/UserContext.tsx"
+  ]
 }
