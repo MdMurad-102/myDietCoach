@@ -41,13 +41,19 @@ export default function Index() {
   const { user, setUser } = context;
   const updateTask = useMutation(api.Users.updateTask);
 
-  // Check if user already has data configured, if so redirect to home
+  // Pre-populate form fields with existing user data
   useEffect(() => {
-    if (isUserProfileComplete(user)) {
-      // User already has profile data, redirect to home
-      router.replace("/(tabs)/Home");
+    if (user) {
+      setGender(user.gender || "");
+      setGoal(user.goal || "");
+      setHeight(user.height || "");
+      setWeight(user.weight || "");
+      setAge(user.age || "");
+      setCountry(user.country || "");
+      setCity(user.city || "");
+      setDietType(user.dietType || "");
     }
-  }, [user, router]);
+  }, [user]);
 
   // Show loading if user data is not loaded yet
   if (!user) {
@@ -64,32 +70,50 @@ export default function Index() {
   }
 
   const onContinue = async () => {
-    // Prevent action if user already has profile data
-    if (isUserProfileComplete(user)) {
-      router.replace("/(tabs)/Home");
-      return;
-    }
+    console.log("Button pressed - onContinue called");
 
     const ageNumber = parseInt(age);
-    if (
-      !weight ||
-      !height ||
-      !gender ||
-      !goal ||
-      !age ||
-      !country ||
-      !city ||
-      !dietType
-    ) {
-      Alert.alert("Enter all details to continue");
+    console.log("Current form data:", {
+      weight,
+      height,
+      gender,
+      goal,
+      age,
+      country,
+      city,
+      dietType,
+    });
+
+    // Check each field individually for better debugging
+    const missingFields = [];
+    if (!weight) missingFields.push("Weight");
+    if (!height) missingFields.push("Height");
+    if (!gender) missingFields.push("Gender");
+    if (!goal) missingFields.push("Goal");
+    if (!age) missingFields.push("Age");
+    if (!country) missingFields.push("Country");
+    if (!city) missingFields.push("City");
+    if (!dietType) missingFields.push("Diet Type");
+
+    if (missingFields.length > 0) {
+      console.log("Validation failed - missing fields:", missingFields);
+      Alert.alert(
+        "Missing Information",
+        `Please fill in the following fields: ${missingFields.join(", ")}`
+      );
       return;
     }
 
     if (isNaN(ageNumber) || ageNumber < 10 || ageNumber > 110) {
-      Alert.alert("Please enter a valid age between 10 and 110.");
+      console.log("Age validation failed:", ageNumber);
+      Alert.alert(
+        "Invalid Age",
+        "Please enter a valid age between 10 and 110."
+      );
       return;
     }
 
+    console.log("Validation passed, starting update process");
     setLoading(true);
 
     const data = {
@@ -165,7 +189,6 @@ export default function Index() {
         return;
       }
       console.log("AI Result:", removeJso);
-      console.log(user);
 
       // Validate that we have the required fields
       if (
@@ -190,6 +213,7 @@ export default function Index() {
         return;
       }
 
+      // Update database first
       await updateTask({
         id: user._id,
         weight,
@@ -204,7 +228,8 @@ export default function Index() {
         dietType,
       });
 
-      setUser({
+      // Update UserContext with all new data
+      const updatedUser = {
         ...user,
         weight,
         height,
@@ -216,13 +241,36 @@ export default function Index() {
         country,
         city,
         dietType,
-      });
+      };
 
-      // Navigate directly without alert
-      router.replace("/(tabs)/Home");
+      setUser(updatedUser);
+      console.log("User context updated:", updatedUser);
+
+      // Check if this is a new user profile completion (calories and protein found)
+      if (calories && proteins) {
+        // New user profile completed successfully - go to Home page
+        Alert.alert(
+          "Success!",
+          "Your profile has been set up successfully! Welcome to My Diet Coach!",
+          [
+            {
+              text: "Get Started",
+              onPress: () => router.replace("/(tabs)/Home"),
+            },
+          ]
+        );
+      } else {
+        // Profile update - go back to Profile page
+        Alert.alert("Success!", "Your profile has been updated successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/Profile"),
+          },
+        ]);
+      }
     } catch (err) {
       console.error("Update failed", err);
-      Alert.alert("Error", "Failed to update preferences.");
+      Alert.alert("Error", "Failed to update profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -232,11 +280,19 @@ export default function Index() {
     <ScrollView
       contentContainerStyle={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      scrollEnabled={true}
     >
       <View style={styles.container}>
-        <Text style={styles.header}>Tell us about yourself</Text>
+        <Text style={styles.header}>
+          {isUserProfileComplete(user)
+            ? "Edit Your Profile"
+            : "Tell us about yourself"}
+        </Text>
         <Text style={styles.subHeader}>
-          This helps us personalize your meal plan
+          {isUserProfileComplete(user)
+            ? "Update your information to improve your meal plan recommendations"
+            : "This helps us personalize your meal plan"}
         </Text>
 
         <View style={styles.row}>
@@ -425,7 +481,11 @@ export default function Index() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <Button Data="Continue" onPress={onContinue} loading={loading} />
+          <Button
+            Data={isUserProfileComplete(user) ? "Update Profile" : "Continue"}
+            onPress={onContinue}
+            loading={loading}
+          />
         </View>
       </View>
     </ScrollView>
@@ -520,5 +580,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 30,
+    zIndex: 1000,
+    pointerEvents: "auto",
   },
 });

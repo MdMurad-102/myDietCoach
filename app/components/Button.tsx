@@ -18,24 +18,39 @@ export default function Button({
   color = "#56ab2f",
   loading = false,
 }: ButtonProps) {
+  const handlePress = () => {
+    if (loading) {
+      return;
+    }
+    if (onPress) {
+      onPress();
+    }
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       style={{
         padding: 15,
-        backgroundColor: color,
+        backgroundColor: loading ? "#cccccc" : color,
         width: "100%",
-        display: "flex",
         alignItems: "center",
         borderRadius: 16,
-        opacity: loading ? 0.7 : 1, // slightly dim when loading
+        elevation: 3, // Add shadow for Android
+        shadowColor: "#000", // Add shadow for iOS
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
       }}
-      disabled={loading} // disable button when loading
+      disabled={loading}
+      activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator color="white" size="small" />
       ) : (
-        <Text style={{ fontSize: 20, color: "white" }}>{Data}</Text>
+        <Text style={{ fontSize: 20, color: "white", fontWeight: "600" }}>
+          {Data}
+        </Text>
       )}
     </TouchableOpacity>
   );

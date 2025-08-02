@@ -17,6 +17,7 @@ export type UserType = {
   country?: string;
   city?: string;
   dietType?: string;
+  dailyWaterGoal?: number;
 } | null;
 
 export type UserContextType = {

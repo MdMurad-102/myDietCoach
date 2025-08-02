@@ -1,10 +1,19 @@
 import Prom from "@/context/Prom";
 import { GenerateRecipeAi } from "@/service/AiModel";
 import React, { useState } from "react";
-import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Button from "../components/Button";
 import IndividualRecipeOption from "../components/IndividualRecipeOption";
 import DailyMealPlanGenerator from "../components/RecipeOption";
+import MealPlanViewer from "../components/MealPlanViewer";
+import SavedRecipesViewer from "../components/SavedRecipesViewer";
 
 type Recipe = {
   RecipeName: string;
@@ -63,91 +72,166 @@ const GenerateAIRecipe = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Daily Meal Plan Generator</Text>
-      <Text style={styles.subHeader}>
-        Generate complete daily meal plans with detailed recipes, or create
-        custom individual recipes.
-      </Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
+        <Text style={styles.header}>Daily Meal Plan Generator</Text>
+        <Text style={styles.subHeader}>
+          Generate complete daily meal plans with detailed recipes, or create
+          custom individual recipes.
+        </Text>
 
-      {/* Daily Meal Plan Generator - Main Feature */}
-      <DailyMealPlanGenerator />
+        {/* Daily Meal Plan Generator - Main Feature */}
+        <DailyMealPlanGenerator />
 
-      {/* Divider */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginVertical: 20,
-        }}
-      >
+        {/* Divider */}
         <View
           style={{
-            flex: 1,
-            height: 1,
-            backgroundColor: "#ddd",
-          }}
-        />
-        <Text
-          style={{
-            marginHorizontal: 15,
-            color: "#666",
-            fontWeight: "500",
+            flexDirection: "row",
+            alignItems: "center",
+            marginVertical: 20,
           }}
         >
-          OR
+          <View
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: "#ddd",
+            }}
+          />
+          <Text
+            style={{
+              marginHorizontal: 15,
+              color: "#666",
+              fontWeight: "500",
+            }}
+          >
+            OR
+          </Text>
+          <View
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: "#ddd",
+            }}
+          />
+        </View>
+
+        {/* Individual Recipe Generator */}
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "600",
+            color: "#333",
+            marginBottom: 10,
+          }}
+        >
+          🧑‍🍳 Custom Recipe Generator
         </Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your ingredient or recipe name (e.g., 'chicken and rice' or 'vegetarian pasta')"
+          placeholderTextColor="#999"
+          multiline
+          numberOfLines={4}
+          value={input}
+          onChangeText={setInput}
+        />
+        <View style={{ marginTop: 15 }}>
+          <Button
+            Data={"Generate Recipe"}
+            color="black"
+            onPress={GenerateRecipeOption}
+            loading={loading}
+          />
+        </View>
+
+        {recipe?.length > 0 && <IndividualRecipeOption recipeList={recipe} />}
+
+        {/* Divider */}
         <View
           style={{
-            flex: 1,
-            height: 1,
-            backgroundColor: "#ddd",
+            flexDirection: "row",
+            alignItems: "center",
+            marginVertical: 30,
           }}
-        />
+        >
+          <View
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: "#ddd",
+            }}
+          />
+          <Text
+            style={{
+              marginHorizontal: 15,
+              color: "#666",
+              fontWeight: "500",
+            }}
+          >
+            SAVED
+          </Text>
+          <View
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: "#ddd",
+            }}
+          />
+        </View>
+
+        {/* Meal Plans Viewer */}
+        <MealPlanViewer />
+
+        {/* Divider */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginVertical: 20,
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: "#ddd",
+            }}
+          />
+          <Text
+            style={{
+              marginHorizontal: 15,
+              color: "#666",
+              fontWeight: "500",
+            }}
+          >
+            RECIPES
+          </Text>
+          <View
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: "#ddd",
+            }}
+          />
+        </View>
+
+        {/* Saved Recipes Viewer */}
+        <SavedRecipesViewer />
       </View>
-
-      {/* Individual Recipe Generator */}
-      <Text
-        style={{
-          fontSize: 18,
-          fontWeight: "600",
-          color: "#333",
-          marginBottom: 10,
-        }}
-      >
-        🧑‍🍳 Custom Recipe Generator
-      </Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your ingredient or recipe name (e.g., 'chicken and rice' or 'vegetarian pasta')"
-        placeholderTextColor="#999"
-        multiline
-        numberOfLines={4}
-        value={input}
-        onChangeText={setInput}
-      />
-      <View style={{ marginTop: 15 }}>
-        <Button
-          Data={"Generate Recipe"}
-          color="black"
-          onPress={GenerateRecipeOption}
-          loading={loading}
-        />
-      </View>
-
-      {recipe?.length > 0 && <IndividualRecipeOption recipeList={recipe} />}
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     paddingTop: Platform.OS === "ios" ? 40 : undefined,
-    padding: 20,
     backgroundColor: "#f9f9f9",
-    width: "100%",
-    height: "100%",
+    flex: 1,
+  },
+  content: {
+    padding: 20,
   },
   header: {
     fontSize: 25,

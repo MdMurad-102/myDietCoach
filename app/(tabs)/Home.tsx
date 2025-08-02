@@ -1,11 +1,13 @@
 import { UserContext } from "@/context/UserContext";
 import { useRouter } from "expo-router";
 import { useContext, useEffect } from "react";
-import { View, Text } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Platform } from "react-native";
 import HomeHader from "../components/HomeHader";
 import GenerateRecipe from "../components/GenerateRecipe";
 import TodayProgress from "../components/TodayProgress";
 import MealsPaln from "../components/MealsPaln";
+import WaterTracker from "../components/WaterTracker";
+import QuickActions from "../components/QuickActions";
 
 export default function Home() {
   const context = useContext(UserContext);
@@ -31,18 +33,46 @@ export default function Home() {
 
   if (user === null) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Loading user data...</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading user data...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ padding: 20 }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      bounces={true}
+    >
       <HomeHader />
       <TodayProgress />
+      <WaterTracker />
+      <QuickActions />
       <GenerateRecipe />
       <MealsPaln />
-    </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f9f9f9",
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40, // Extra padding at bottom for better scroll experience
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f9f9f9",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+  },
+});
