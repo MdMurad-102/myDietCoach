@@ -35,8 +35,17 @@ export default function Index() {
           age: userData.age,
           calories: userData.calories,
           proteins: userData.proteins,
+          country: userData.country,
+          city: userData.city,
+          dietType: userData.dietType,
         });
-        router.replace("/(tabs)/Home");
+
+        // Check if user has completed profile setup
+        if (!userData.height || !userData.weight || !userData.calories) {
+          router.replace("/NewUser/Index");
+        } else {
+          router.replace("/(tabs)/Home");
+        }
       }
     });
 
@@ -109,7 +118,7 @@ export default function Index() {
       >
         <Button
           Data={"Get Started → "}
-          onPress={() => router.push("./Sign/signIn")}
+          onPress={() => router.push("/Sign/SignIn")}
         />
       </View>
     </View>

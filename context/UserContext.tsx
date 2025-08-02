@@ -1,7 +1,7 @@
 // context/UserContext.tsx
 
-import { createContext } from "react";
 import { Id } from "@/convex/_generated/dataModel";
+import { createContext } from "react";
 
 export type UserType = {
   _id: Id<"Users">;
@@ -14,6 +14,9 @@ export type UserType = {
   age?: string;
   calories?: number;
   proteins?: number;
+  country?: string;
+  city?: string;
+  dietType?: string;
 } | null;
 
 export type UserContextType = {

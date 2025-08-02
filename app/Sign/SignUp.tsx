@@ -1,18 +1,26 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
-import React, { useContext, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { app } from '../../service/firebaseConfig';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import { UserContext } from '@/context/UserContext';
+import { UserContext } from "@/context/UserContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "convex/react";
+import { useRouter } from "expo-router";
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import React, { useContext, useState } from "react";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { api } from "../../convex/_generated/api";
+import { app } from "../../service/firebaseConfig";
 
 export default function SignUp() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
   const createNewUsers = useMutation(api.Users.CreateNewUsers);
   const context = useContext(UserContext);
@@ -24,20 +32,20 @@ export default function SignUp() {
   const { user, setUser } = context;
 
   const togglePassword = () => {
-    setShowPassword(prev => !prev);
+    setShowPassword((prev) => !prev);
   };
 
   const signUp = () => {
     if (!username || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert("Error", "Please fill in all fields.");
       return;
     }
 
     const auth = getAuth(app);
     createUserWithEmailAndPassword(auth, email, password)
       .then(async (userCredential) => {
-        Alert.alert('Success', 'Account created successfully!');
-        console.log('User:', userCredential.user);
+        Alert.alert("Success", "Account created successfully!");
+        console.log("User:", userCredential.user);
         const user = userCredential.user;
         if (user) {
           // Call your backend to create user in DB
@@ -46,9 +54,9 @@ export default function SignUp() {
             email: email,
           });
 
-          console.log('CreateNewUsers result:', result);
+          console.log("CreateNewUsers result:", result);
 
-          if ('_id' in result) {
+          if ("_id" in result) {
             setUser({
               _id: result._id,
               name: result.name,
@@ -59,18 +67,20 @@ export default function SignUp() {
             setUser(null);
           }
         }
-        router.push('./signIn'); // navigate to login
+        router.push("/Sign/SignIn"); // navigate to login
       })
       .catch((error) => {
-        console.error('Signup error:', error.message);
-        Alert.alert('Signup Failed', error.message);
+        console.error("Signup error:", error.message);
+        Alert.alert("Signup Failed", error.message);
       });
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>SIGN UP</Text>
-      <Text style={styles.subtitle}>Hello user, you have a greatful journey</Text>
+      <Text style={styles.subtitle}>
+        Hello user, you have a greatful journey
+      </Text>
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -102,7 +112,7 @@ export default function SignUp() {
         />
         <TouchableOpacity onPress={togglePassword}>
           <Ionicons
-            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
             size={20}
             color="#777"
           />
@@ -114,8 +124,11 @@ export default function SignUp() {
       </TouchableOpacity>
 
       <Text style={styles.registerText}>
-        Already have an account?{' '}
-        <Text style={styles.registerLink} onPress={() => router.push('./signIn')}>
+        Already have an account?{" "}
+        <Text
+          style={styles.registerLink}
+          onPress={() => router.push("/Sign/SignIn")}
+        >
           Login
         </Text>
       </Text>
@@ -126,60 +139,60 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 20,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
-    color: '#333',
+    color: "#333",
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 30,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 15,
-    width: '100%',
-    backgroundColor: '#f9f9f9',
+    width: "100%",
+    backgroundColor: "#f9f9f9",
   },
   input: {
     flex: 1,
     height: 40,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   loginButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
-    width: '100%',
+    width: "100%",
   },
   loginButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   registerText: {
     marginTop: 20,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   registerLink: {
-    color: '#4CAF50',
-    fontWeight: 'bold',
+    color: "#4CAF50",
+    fontWeight: "bold",
   },
 });

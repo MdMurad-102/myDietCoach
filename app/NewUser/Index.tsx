@@ -4,8 +4,8 @@ import { api } from "@/convex/_generated/api";
 import { CalculateCalories } from "@/service/AiModel";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
-import { router } from "expo-router";
-import { useContext, useState } from "react";
+import { useRouter } from "expo-router";
+import { useContext, useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -17,12 +17,22 @@ import {
 import Button from "../components/Button";
 import Input from "./Input";
 
+// Utility function to check if user profile is complete
+const isUserProfileComplete = (user: any) => {
+  return user && user.height && user.weight && user.calories && user.proteins;
+};
+
 export default function Index() {
   const [gender, setGender] = useState("");
   const [goal, setGoal] = useState("");
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [age, setAge] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [dietType, setDietType] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const context = useContext(UserContext);
   if (!context)
@@ -31,9 +41,46 @@ export default function Index() {
   const { user, setUser } = context;
   const updateTask = useMutation(api.Users.updateTask);
 
+  // Check if user already has data configured, if so redirect to home
+  useEffect(() => {
+    if (isUserProfileComplete(user)) {
+      // User already has profile data, redirect to home
+      router.replace("/(tabs)/Home");
+    }
+  }, [user, router]);
+
+  // Show loading if user data is not loaded yet
+  if (!user) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   const onContinue = async () => {
+    // Prevent action if user already has profile data
+    if (isUserProfileComplete(user)) {
+      router.replace("/(tabs)/Home");
+      return;
+    }
+
     const ageNumber = parseInt(age);
-    if (!weight || !height || !gender || !goal || !age) {
+    if (
+      !weight ||
+      !height ||
+      !gender ||
+      !goal ||
+      !age ||
+      !country ||
+      !city ||
+      !dietType
+    ) {
       Alert.alert("Enter all details to continue");
       return;
     }
@@ -43,6 +90,8 @@ export default function Index() {
       return;
     }
 
+    setLoading(true);
+
     const data = {
       id: user?._id,
       weight: weight,
@@ -50,31 +99,97 @@ export default function Index() {
       age: age,
       gender: gender,
       goal: goal,
+      country: country,
+      city: city,
+      dietType: dietType,
     };
 
-    const PROMPT = JSON.stringify(data) + Prom.CALORIESANDPRO;
-    const AiCalculate = await CalculateCalories(PROMPT);
-    const AIResult = AiCalculate;
-
-    let removeJso = null;
-    if (AIResult) {
-      removeJso = JSON.parse(
-        AIResult.replace("```json", " ").replace("```", " ")
-      );
-    } else {
-      Alert.alert("AI result is missing or invalid.");
-      return;
-    }
-    console.log("AI Result:", removeJso);
-    console.log(user) ;
-    const { calories, proteins } = removeJso;
-
-    if (!user?._id) {
-      Alert.alert("User ID is missing. Make sure user is logged in.");
-      return;
-    }
-
     try {
+      const PROMPT = JSON.stringify(data) + Prom.CALORIESANDPRO;
+      console.log("Sending prompt to AI:", PROMPT);
+
+      const AiCalculate = await CalculateCalories(PROMPT);
+      const AIResult = AiCalculate;
+
+      console.log("Raw AI Response:", AIResult);
+
+      let removeJso = null;
+      if (AIResult) {
+        try {
+          // Clean the AI response more thoroughly
+          let cleanedResult = AIResult.trim();
+
+          // Remove markdown code blocks
+          cleanedResult = cleanedResult.replace(/```json\s*/g, "");
+          cleanedResult = cleanedResult.replace(/```\s*/g, "");
+
+          // Find the JSON object by looking for the first { and last }
+          const firstBrace = cleanedResult.indexOf("{");
+          const lastBrace = cleanedResult.lastIndexOf("}");
+
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            const jsonString = cleanedResult.substring(
+              firstBrace,
+              lastBrace + 1
+            );
+            removeJso = JSON.parse(jsonString);
+          } else {
+            throw new Error("No valid JSON object found in AI response");
+          }
+        } catch (parseError) {
+          console.error("JSON Parse Error:", parseError);
+          console.error("AI Response:", AIResult);
+
+          // Try to extract numbers from the response as a fallback
+          const caloriesMatch = AIResult.match(/calories["\s:]*(\d+)/i);
+          const proteinsMatch = AIResult.match(/proteins["\s:]*(\d+)/i);
+
+          if (caloriesMatch && proteinsMatch) {
+            removeJso = {
+              calories: parseInt(caloriesMatch[1]),
+              proteins: parseInt(proteinsMatch[1]),
+            };
+            console.log("Fallback extraction successful:", removeJso);
+          } else {
+            Alert.alert(
+              "Error",
+              "Failed to parse AI response. Please try again."
+            );
+            setLoading(false);
+            return;
+          }
+        }
+      } else {
+        Alert.alert("AI result is missing or invalid.");
+        setLoading(false);
+        return;
+      }
+      console.log("AI Result:", removeJso);
+      console.log(user);
+
+      // Validate that we have the required fields
+      if (
+        !removeJso ||
+        typeof removeJso.calories !== "number" ||
+        typeof removeJso.proteins !== "number"
+      ) {
+        console.error("Invalid AI response structure:", removeJso);
+        Alert.alert(
+          "Error",
+          "AI response is missing required nutrition data. Please try again."
+        );
+        setLoading(false);
+        return;
+      }
+
+      const { calories, proteins } = removeJso;
+
+      if (!user?._id) {
+        Alert.alert("User ID is missing. Make sure user is logged in.");
+        setLoading(false);
+        return;
+      }
+
       await updateTask({
         id: user._id,
         weight,
@@ -84,6 +199,9 @@ export default function Index() {
         age,
         calories,
         proteins,
+        country,
+        city,
+        dietType,
       });
 
       setUser({
@@ -95,6 +213,9 @@ export default function Index() {
         age,
         calories,
         proteins,
+        country,
+        city,
+        dietType,
       });
 
       // Navigate directly without alert
@@ -102,8 +223,9 @@ export default function Index() {
     } catch (err) {
       console.error("Update failed", err);
       Alert.alert("Error", "Failed to update preferences.");
+    } finally {
+      setLoading(false);
     }
-    router.replace("/(tabs)/Home");
   };
 
   return (
@@ -140,6 +262,69 @@ export default function Index() {
             keyboardType="numeric"
           />
         </View>
+
+        <View style={styles.row}>
+          <Input
+            placeholder="e.g. India"
+            label="Country"
+            value={country}
+            onChangeText={setCountry}
+          />
+          <Input
+            placeholder="e.g. Mumbai"
+            label="City"
+            value={city}
+            onChangeText={setCity}
+          />
+        </View>
+
+        <Text style={styles.sectionLabel}>Diet Type</Text>
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={[
+              styles.selectBox,
+              dietType === "vegetarian" && styles.selectedBox,
+            ]}
+            onPress={() => setDietType("vegetarian")}
+          >
+            <MaterialCommunityIcons
+              name="carrot"
+              size={24}
+              color={dietType === "vegetarian" ? "#fff" : "#4CAF50"}
+            />
+            <Text
+              style={[
+                styles.selectText,
+                dietType === "vegetarian" && styles.selectedText,
+              ]}
+            >
+              Vegetarian
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.selectBox,
+              dietType === "non-vegetarian" && styles.selectedBox,
+            ]}
+            onPress={() => setDietType("non-vegetarian")}
+          >
+            <MaterialCommunityIcons
+              name="food-drumstick"
+              size={24}
+              color={dietType === "non-vegetarian" ? "#fff" : "#FF5722"}
+            />
+            <Text
+              style={[
+                styles.selectText,
+                dietType === "non-vegetarian" && styles.selectedText,
+              ]}
+            >
+              Non-Vegetarian
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.sectionLabel}>Gender</Text>
         <View style={styles.row}>
           <TouchableOpacity
@@ -240,7 +425,7 @@ export default function Index() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <Button Data={"Continue"} onPress={onContinue} />
+          <Button Data="Continue" onPress={onContinue} loading={loading} />
         </View>
       </View>
     </ScrollView>

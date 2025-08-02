@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { auth } from "@/service/firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { useConvex } from "convex/react";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import React, { useContext, useState } from "react";
 import {
@@ -18,6 +18,7 @@ export default function SignIn() {
   const [email, setemail] = useState("");
   const [password, setPassword] = useState("");
   const [showpassword, setshowpassword] = useState(false);
+  const router = useRouter();
   const convex = useConvex();
   const context = useContext(UserContext);
 
@@ -111,7 +112,7 @@ export default function SignIn() {
         Don’t have an account?{" "}
         <Text
           style={styles.registerLink}
-          onPress={() => router.push("./signUp")}
+          onPress={() => router.push("/Sign/SignUp")}
         >
           Register Here
         </Text>
@@ -122,7 +123,6 @@ export default function SignIn() {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -173,4 +173,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-})
+});
