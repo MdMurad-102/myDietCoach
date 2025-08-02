@@ -1,12 +1,12 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Button from './Button';
-import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Text, View } from "react-native";
+import Button from "./Button";
 
 const MealsPaln = () => {
-    const [MealsPaln ,setMealsPaln] = React.useState();
-    const router = useRouter();
+  const [MealsPaln, setMealsPaln] = React.useState();
+  const router = useRouter();
   return (
     <View
       style={{
@@ -26,7 +26,7 @@ const MealsPaln = () => {
           shadowColor: "#000",
         }}
       >
-        Today's Meal plan
+        🍽️ Today's Daily Meal Plan
       </Text>
       {!MealsPaln && (
         <View
@@ -52,13 +52,14 @@ const MealsPaln = () => {
             You Don't Have any meal plan for Today
           </Text>
           <Button
-            Data={"Create a New Meal Plan"}
+            Data={"Generate Daily Meal Plan"}
             color="blue"
-            onPress={()=>router.push('/generateAIRecipe')}     />
+            onPress={() => router.push("/generateAIRecipe")}
+          />
         </View>
       )}
     </View>
   );
-}
+};
 
-export default MealsPaln
+export default MealsPaln;

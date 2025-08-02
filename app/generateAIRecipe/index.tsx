@@ -1,9 +1,10 @@
-import { View, Text, Platform, TextInput, StyleSheet } from "react-native";
-import React, { useState } from "react";
-import Button from "../components/Button";
 import Prom from "@/context/Prom";
 import { GenerateRecipeAi } from "@/service/AiModel";
-import RecipeOption from "../components/RecipeOption";
+import React, { useState } from "react";
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import Button from "../components/Button";
+import IndividualRecipeOption from "../components/IndividualRecipeOption";
+import DailyMealPlanGenerator from "../components/RecipeOption";
 
 type Recipe = {
   RecipeName: string;
@@ -63,18 +64,66 @@ const GenerateAIRecipe = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>AI Recipe Generator</Text>
+      <Text style={styles.header}>Daily Meal Plan Generator</Text>
       <Text style={styles.subHeader}>
-        Generate personalized recipes based on your dietary preferences and
-        ingredients you have at home.
+        Generate complete daily meal plans with detailed recipes, or create
+        custom individual recipes.
+      </Text>
+
+      {/* Daily Meal Plan Generator - Main Feature */}
+      <DailyMealPlanGenerator />
+
+      {/* Divider */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 20,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            height: 1,
+            backgroundColor: "#ddd",
+          }}
+        />
+        <Text
+          style={{
+            marginHorizontal: 15,
+            color: "#666",
+            fontWeight: "500",
+          }}
+        >
+          OR
+        </Text>
+        <View
+          style={{
+            flex: 1,
+            height: 1,
+            backgroundColor: "#ddd",
+          }}
+        />
+      </View>
+
+      {/* Individual Recipe Generator */}
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "600",
+          color: "#333",
+          marginBottom: 10,
+        }}
+      >
+        🧑‍🍳 Custom Recipe Generator
       </Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Enter your ingredient or recipe name"
+        placeholder="Enter your ingredient or recipe name (e.g., 'chicken and rice' or 'vegetarian pasta')"
         placeholderTextColor="#999"
         multiline
-        numberOfLines={6}
+        numberOfLines={4}
         value={input}
         onChangeText={setInput}
       />
@@ -87,7 +136,7 @@ const GenerateAIRecipe = () => {
         />
       </View>
 
-      {recipe?.length > 0 && <RecipeOption recipeList={recipe} />}
+      {recipe?.length > 0 && <IndividualRecipeOption recipeList={recipe} />}
     </View>
   );
 };
