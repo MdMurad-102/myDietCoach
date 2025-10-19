@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -8,12 +8,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import CustomRecipeManager from "./CustomRecipeManager";
-import RecipeScheduler from "./RecipeScheduler";
 
 export default function QuickActions() {
-  const [showCustomRecipeManager, setShowCustomRecipeManager] = useState(false);
-  const [showRecipeScheduler, setShowRecipeScheduler] = useState(false);
   const router = useRouter();
 
   const quickActionItems = [
@@ -22,21 +18,7 @@ export default function QuickActions() {
       title: "Generate Recipe",
       icon: "sparkles",
       color: "#FF6B6B",
-      onPress: () => router.push("/generateAIRecipe"),
-    },
-    {
-      id: "custom",
-      title: "Custom Recipe",
-      icon: "add-circle",
-      color: "#4ECDC4",
-      onPress: () => setShowCustomRecipeManager(true),
-    },
-    {
-      id: "schedule",
-      title: "Schedule Meal",
-      icon: "calendar",
-      color: "#45B7D1",
-      onPress: () => setShowRecipeScheduler(true),
+      onPress: () => router.push("/recipeGenerator" as any),
     },
     {
       id: "meals",
@@ -44,6 +26,13 @@ export default function QuickActions() {
       icon: "restaurant",
       color: "#96CEB4",
       onPress: () => router.push("/(tabs)/Meals"),
+    },
+    {
+      id: "progress",
+      title: "My Progress",
+      icon: "trending-up",
+      color: "#45B7D1",
+      onPress: () => router.push("/Progress"),
     },
   ];
 
@@ -74,26 +63,6 @@ export default function QuickActions() {
           </TouchableOpacity>
         ))}
       </ScrollView>
-
-      {/* Custom Recipe Manager Modal */}
-      <CustomRecipeManager
-        visible={showCustomRecipeManager}
-        onClose={() => setShowCustomRecipeManager(false)}
-      />
-
-      {/* Recipe Scheduler Modal */}
-      <RecipeScheduler
-        visible={showRecipeScheduler}
-        onClose={() => setShowRecipeScheduler(false)}
-        onScheduleRecipe={(recipe, date) => {
-          console.log(
-            "Recipe scheduled from quick actions:",
-            recipe,
-            "for date:",
-            date
-          );
-        }}
-      />
     </View>
   );
 }

@@ -1,56 +1,49 @@
 import { UserContext } from "@/context/UserContext";
-import { api } from "@/convex/_generated/api";
-import { auth } from "@/service/firebaseConfig";
-import { useConvex } from "convex/react";
+import { getUser } from "@/service/api";
+import { isUserProfileComplete } from "@/utils/userHelpers";
 import { useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
 import { useContext, useEffect } from "react";
 import { Dimensions, Image, Text, View } from "react-native";
 import Button from "./components/Button";
+
 export default function Index() {
   const router = useRouter();
   const context = useContext(UserContext);
-  const convex = useConvex();
+
   if (!context) {
     throw new Error("UserContext must be used within a UserProvider");
   }
   const { user, setUser } = context;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (userInfo) => {
-      if (userInfo && userInfo.email) {
-        console.log(userInfo.email);
-        console.log("jkjkjj");
-        const userData = await convex.query(api.Users.GetUser, {
-          email: userInfo.email,
-        });
-        setUser({
-          _id: userData._id,
-          name: userData.name,
-          email: userData.email,
-          weight: userData.weight,
-          height: userData.height,
-          gender: userData.gender,
-          goal: userData.goal,
-          age: userData.age,
-          calories: userData.calories,
-          proteins: userData.proteins,
-          country: userData.country,
-          city: userData.city,
-          dietType: userData.dietType,
-        });
+    // Restore user from localStorage (mock session) - only on web
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
 
-        // Check if user has completed profile setup
-        if (!userData.height || !userData.weight || !userData.calories) {
-          router.replace("/NewUser/Index");
-        } else {
-          router.replace("/(tabs)/Home");
+    (async () => {
+      try {
+        const stored = localStorage.getItem('mydietcoach_data');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const lastUser = parsed.users && parsed.users[parsed.users.length - 1];
+          if (lastUser && lastUser.email) {
+            const userData = await getUser(lastUser.email);
+            if (userData) {
+              setUser(userData);
+              if (isUserProfileComplete(userData)) {
+                router.replace("/(tabs)/Home");
+              } else {
+                router.replace("/NewUser/Index");
+              }
+            }
+          }
         }
+      } catch (error) {
+        console.error('Error restoring session:', error);
       }
-    });
-
-    return () => unsubscribe();
-  }, []);
+    })();
+  }, [setUser, router]);
 
   return (
     <View

@@ -1,8 +1,8 @@
 import { UserContext } from "@/context/UserContext";
-import { auth } from "@/service/firebaseConfig";
+// Firebase removed; using local session handling
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { signOut } from "firebase/auth";
+// ...existing imports
 import React, { useContext } from "react";
 import {
   Alert,
@@ -31,14 +31,24 @@ export default function Profile() {
         style: "cancel",
       },
       {
-        text: "Logout",
+        text: "OK",
         style: "destructive",
         onPress: async () => {
           try {
-            await signOut(auth);
+            // Clear local session (mock)
+            const stored = localStorage.getItem('mydietcoach_data');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              // Optionally remove session or user tokens here
+              localStorage.setItem('mydietcoach_data', JSON.stringify(parsed));
+            }
             setUser(null);
-            Alert.alert("Success", "You have been logged out successfully");
-            router.replace("/Sign/SignIn");
+            Alert.alert("Success", "You have been logged out successfully", [
+              {
+                text: "OK",
+                onPress: () => router.replace("/"),
+              },
+            ]);
           } catch (error) {
             console.error("Logout error:", error);
             Alert.alert("Error", "Failed to logout. Please try again.");
@@ -48,16 +58,25 @@ export default function Profile() {
     ]);
   };
 
+  const handleEditProfile = () => {
+    // Navigate to NewUser/Index for profile editing
+    router.push("/NewUser/Index");
+  };
+
+  const handleProgress = () => {
+    router.push("/Progress");
+  };
+
+  const handleAIChat = () => {
+    router.push("/AIChat");
+  };
+
   const handleLogin = () => {
     router.push("/Sign/SignIn");
   };
 
   const handleSignUp = () => {
     router.push("/Sign/SignUp");
-  };
-
-  const handleEditProfile = () => {
-    router.push("/NewUser/Index");
   };
 
   // If user is not logged in, show login/signup options
@@ -92,8 +111,11 @@ export default function Profile() {
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.profileImageContainer}>
-          {user.picture ? (
-            <Image source={{ uri: user.picture }} style={styles.profileImage} />
+          {(user as any).picture ? (
+            <Image
+              source={{ uri: (user as any).picture }}
+              style={styles.profileImage}
+            />
           ) : (
             <Ionicons name="person-circle" size={80} color="#4CAF50" />
           )}
@@ -171,7 +193,7 @@ export default function Profile() {
         <View style={styles.dietCard}>
           <Ionicons name="restaurant-outline" size={20} color="#8BC34A" />
           <Text style={styles.dietText}>
-            Diet Type: {user.dietType || "Not specified"}
+            Diet Type: {user.diet_type || "Not specified"}
           </Text>
         </View>
       </View>
@@ -186,6 +208,18 @@ export default function Profile() {
         >
           <Ionicons name="create-outline" size={20} color="#2196F3" />
           <Text style={styles.actionButtonText}>Edit Profile</Text>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionButton} onPress={handleProgress}>
+          <Ionicons name="analytics-outline" size={20} color="#FF9800" />
+          <Text style={styles.actionButtonText}>Progress Dashboard</Text>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionButton} onPress={handleAIChat}>
+          <Ionicons name="chatbubbles-outline" size={20} color="#4CAF50" />
+          <Text style={styles.actionButtonText}>AI Nutritionist Chat</Text>
           <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
 

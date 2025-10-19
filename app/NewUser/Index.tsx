@@ -1,11 +1,11 @@
 import Prom from "@/context/Prom";
 import { UserContext } from "@/context/UserContext";
-import { api } from "@/convex/_generated/api";
+import { updateUserProfile } from "@/service/api";
 import { CalculateCalories } from "@/service/AiModel";
+import { isUserProfileComplete } from "@/utils/userHelpers";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -17,11 +17,6 @@ import {
 import Button from "../components/Button";
 import Input from "./Input";
 
-// Utility function to check if user profile is complete
-const isUserProfileComplete = (user: any) => {
-  return user && user.height && user.weight && user.calories && user.proteins;
-};
-
 export default function Index() {
   const [gender, setGender] = useState("");
   const [goal, setGoal] = useState("");
@@ -32,6 +27,8 @@ export default function Index() {
   const [city, setCity] = useState("");
   const [dietType, setDietType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const initialModeSet = useRef(false);
   const router = useRouter();
 
   const context = useContext(UserContext);
@@ -39,10 +36,21 @@ export default function Index() {
     throw new Error("UserContext must be used within a UserProvider");
 
   const { user, setUser } = context;
-  const updateTask = useMutation(api.Users.updateTask);
 
-  // Pre-populate form fields with existing user data
+  // Pre-populate form fields with existing user data and determine mode
   useEffect(() => {
+    if (user && !initialModeSet.current) {
+      // Set mode only once when component first loads
+      const userProfileComplete = isUserProfileComplete(user);
+      setIsEditMode(userProfileComplete);
+      initialModeSet.current = true;
+
+      console.log(
+        "Initial mode set:",
+        userProfileComplete ? "Edit" : "New User"
+      );
+    }
+
     if (user) {
       setGender(user.gender || "");
       setGoal(user.goal || "");
@@ -51,7 +59,7 @@ export default function Index() {
       setAge(user.age || "");
       setCountry(user.country || "");
       setCity(user.city || "");
-      setDietType(user.dietType || "");
+      setDietType(user.diet_type || "");
     }
   }, [user]);
 
@@ -117,7 +125,7 @@ export default function Index() {
     setLoading(true);
 
     const data = {
-      id: user?._id,
+      id: user?.id,
       weight: weight,
       height: height,
       age: age,
@@ -125,7 +133,7 @@ export default function Index() {
       goal: goal,
       country: country,
       city: city,
-      dietType: dietType,
+      diet_type: dietType,
     };
 
     try {
@@ -207,15 +215,14 @@ export default function Index() {
 
       const { calories, proteins } = removeJso;
 
-      if (!user?._id) {
+      if (!user?.id) {
         Alert.alert("User ID is missing. Make sure user is logged in.");
         setLoading(false);
         return;
       }
 
-      // Update database first
-      await updateTask({
-        id: user._id,
+      // Update database
+      const updatedUserData = await updateUserProfile(user.id, {
         weight,
         height,
         gender,
@@ -225,49 +232,37 @@ export default function Index() {
         proteins,
         country,
         city,
-        dietType,
+        diet_type: dietType,
       });
 
       // Update UserContext with all new data
-      const updatedUser = {
-        ...user,
-        weight,
-        height,
-        gender,
-        goal,
-        age,
-        calories,
-        proteins,
-        country,
-        city,
-        dietType,
-      };
+      setUser(updatedUserData);
+      console.log("User context updated:", updatedUserData);
+      console.log("Current isEditMode:", isEditMode);
 
-      setUser(updatedUser);
-      console.log("User context updated:", updatedUser);
-
-      // Check if this is a new user profile completion (calories and protein found)
-      if (calories && proteins) {
-        // New user profile completed successfully - go to Home page
-        Alert.alert(
-          "Success!",
-          "Your profile has been set up successfully! Welcome to My Diet Coach!",
-          [
-            {
-              text: "Get Started",
-              onPress: () => router.replace("/(tabs)/Home"),
-            },
-          ]
-        );
+      // IMMEDIATE NAVIGATION - Skip alerts for testing
+      if (isEditMode) {
+        console.log("IMMEDIATE: Navigating to Profile page (edit mode)");
+        router.push("/(tabs)/Profile");
       } else {
-        // Profile update - go back to Profile page
-        Alert.alert("Success!", "Your profile has been updated successfully!", [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/Profile"),
-          },
-        ]);
+        console.log("IMMEDIATE: Navigating to Home page (new user mode)");
+        router.replace("/(tabs)/Home");
       }
+
+      // Show alert after navigation as confirmation
+      setTimeout(() => {
+        if (isEditMode) {
+          Alert.alert(
+            "Success!",
+            "Your profile has been updated successfully!"
+          );
+        } else {
+          Alert.alert(
+            "Welcome!",
+            "Your profile has been set up successfully! Welcome to My Diet Coach!"
+          );
+        }
+      }, 1000);
     } catch (err) {
       console.error("Update failed", err);
       Alert.alert("Error", "Failed to update profile. Please try again.");
@@ -285,12 +280,10 @@ export default function Index() {
     >
       <View style={styles.container}>
         <Text style={styles.header}>
-          {isUserProfileComplete(user)
-            ? "Edit Your Profile"
-            : "Tell us about yourself"}
+          {isEditMode ? "Edit Your Profile" : "Tell us about yourself"}
         </Text>
         <Text style={styles.subHeader}>
-          {isUserProfileComplete(user)
+          {isEditMode
             ? "Update your information to improve your meal plan recommendations"
             : "This helps us personalize your meal plan"}
         </Text>
@@ -482,7 +475,7 @@ export default function Index() {
 
         <View style={styles.buttonContainer}>
           <Button
-            Data={isUserProfileComplete(user) ? "Update Profile" : "Continue"}
+            Data={isEditMode ? "Update Profile" : "Continue"}
             onPress={onContinue}
             loading={loading}
           />
