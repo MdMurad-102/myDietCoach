@@ -1,18 +1,17 @@
 import { UserContext } from "@/context/UserContext";
-// Firebase removed; using local session handling
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-// ...existing imports
 import React, { useContext } from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Button from "../components/Button";
+import ProfileHeader from "../components/ProfileHeader";
 
 export default function Profile() {
   const context = useContext(UserContext);
@@ -26,243 +25,163 @@ export default function Profile() {
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+      { text: "Cancel", style: "cancel" },
       {
         text: "OK",
         style: "destructive",
-        onPress: async () => {
-          try {
-            // Clear local session (mock)
-            const stored = localStorage.getItem('mydietcoach_data');
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              // Optionally remove session or user tokens here
-              localStorage.setItem('mydietcoach_data', JSON.stringify(parsed));
-            }
-            setUser(null);
-            Alert.alert("Success", "You have been logged out successfully", [
-              {
-                text: "OK",
-                onPress: () => router.replace("/"),
-              },
-            ]);
-          } catch (error) {
-            console.error("Logout error:", error);
-            Alert.alert("Error", "Failed to logout. Please try again.");
-          }
+        onPress: () => {
+          setUser(null);
+          router.replace("/");
         },
       },
     ]);
   };
 
-  const handleEditProfile = () => {
-    // Navigate to NewUser/Index for profile editing
-    router.push("/NewUser/Index");
-  };
-
-  const handleProgress = () => {
-    router.push("/Progress");
-  };
-
-  const handleAIChat = () => {
-    router.push("/AIChat");
-  };
-
-  const handleLogin = () => {
-    router.push("/Sign/SignIn");
-  };
-
-  const handleSignUp = () => {
-    router.push("/Sign/SignUp");
-  };
-
-  // If user is not logged in, show login/signup options
   if (!user) {
     return (
       <View style={styles.container}>
         <View style={styles.notLoggedInContainer}>
           <Ionicons name="person-circle-outline" size={100} color="#ccc" />
-          <Text style={styles.notLoggedInTitle}>Welcome to My Diet Coach</Text>
+          <Text style={styles.notLoggedInTitle}>Welcome!</Text>
           <Text style={styles.notLoggedInSubtitle}>
-            Please login or create an account to access your profile and
-            personalized meal plans
+            Login or create an account to manage your profile.
           </Text>
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Ionicons name="log-in-outline" size={20} color="#fff" />
-            <Text style={styles.loginButtonText}>Login</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-            <Ionicons name="person-add-outline" size={20} color="#4CAF50" />
-            <Text style={styles.signUpButtonText}>Create Account</Text>
-          </TouchableOpacity>
+          <Button
+            title="Login or Sign Up"
+            onPress={() => router.push("/Sign/SignIn")}
+            variant="primary"
+            icon="log-in-outline"
+          />
         </View>
       </View>
     );
   }
 
-  // If user is logged in, show profile information
+  const menuItems = [
+    {
+      title: "Edit Profile",
+      icon: "create-outline",
+      screen: "/NewUser/Index",
+      color: "#3498db",
+    },
+    {
+      title: "Progress Dashboard",
+      icon: "analytics-outline",
+      screen: "/Progress",
+      color: "#2ecc71",
+    },
+    {
+      title: "AI Nutritionist",
+      icon: "chatbubbles-outline",
+      screen: "/AIChat",
+      color: "#9b59b6",
+    },
+    {
+      title: "Settings",
+      icon: "settings-outline",
+      screen: "/settings",
+      color: "#f39c12",
+    },
+    {
+      title: "Help & Support",
+      icon: "help-circle-outline",
+      screen: "/support",
+      color: "#e74c3c",
+    },
+  ];
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.profileImageContainer}>
-          {(user as any).picture ? (
-            <Image
-              source={{ uri: (user as any).picture }}
-              style={styles.profileImage}
-            />
-          ) : (
-            <Ionicons name="person-circle" size={80} color="#4CAF50" />
-          )}
-        </View>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
-      </View>
+      <ProfileHeader user={user} />
 
-      {/* Profile Information */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📊 Profile Information</Text>
-
-        <View style={styles.infoGrid}>
-          <View style={styles.infoCard}>
-            <Ionicons name="scale-outline" size={24} color="#4CAF50" />
-            <Text style={styles.infoLabel}>Weight</Text>
-            <Text style={styles.infoValue}>{user.weight || "Not set"}</Text>
-          </View>
-
-          <View style={styles.infoCard}>
-            <Ionicons name="resize-outline" size={24} color="#FF9800" />
-            <Text style={styles.infoLabel}>Height</Text>
-            <Text style={styles.infoValue}>{user.height || "Not set"}</Text>
-          </View>
-
-          <View style={styles.infoCard}>
-            <Ionicons name="person-outline" size={24} color="#2196F3" />
-            <Text style={styles.infoLabel}>Age</Text>
-            <Text style={styles.infoValue}>{user.age || "Not set"}</Text>
-          </View>
-
-          <View style={styles.infoCard}>
-            <Ionicons name="male-female-outline" size={24} color="#E91E63" />
-            <Text style={styles.infoLabel}>Gender</Text>
-            <Text style={styles.infoValue}>{user.gender || "Not set"}</Text>
-          </View>
+        <Text style={styles.sectionTitle}>Your Stats</Text>
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon="scale-outline"
+            label="Weight"
+            value={user.weight || "N/A"}
+            unit="kg"
+            color="#2ecc71"
+          />
+          <StatCard
+            icon="resize-outline"
+            label="Height"
+            value={user.height || "N/A"}
+            unit="cm"
+            color="#3498db"
+          />
+          <StatCard
+            icon="body-outline"
+            label="Age"
+            value={user.age || "N/A"}
+            unit="yrs"
+            color="#9b59b6"
+          />
+          <StatCard
+            icon="male-female-outline"
+            label="Gender"
+            value={user.gender || "N/A"}
+            color="#e91e63"
+          />
         </View>
       </View>
 
-      {/* Goals & Nutrition */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🎯 Goals & Nutrition</Text>
-
-        <View style={styles.goalCard}>
-          <Ionicons name="flag-outline" size={20} color="#4CAF50" />
-          <Text style={styles.goalLabel}>Goal:</Text>
-          <Text style={styles.goalValue}>{user.goal || "Not set"}</Text>
-        </View>
-
-        <View style={styles.nutritionGrid}>
-          <View style={styles.nutritionCard}>
-            <Text style={styles.nutritionValue}>{user.calories || 0}</Text>
-            <Text style={styles.nutritionLabel}>Daily Calories</Text>
-          </View>
-          <View style={styles.nutritionCard}>
-            <Text style={styles.nutritionValue}>{user.proteins || 0}g</Text>
-            <Text style={styles.nutritionLabel}>Daily Protein</Text>
-          </View>
-        </View>
+        <Text style={styles.sectionTitle}>Menu</Text>
+        {menuItems.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={() => router.push(item.screen as any)}
+          >
+            <View
+              style={[
+                styles.menuIcon,
+                { backgroundColor: `${item.color}20` },
+              ]}
+            >
+              <Ionicons name={item.icon as any} size={22} color={item.color} />
+            </View>
+            <Text style={styles.menuItemText}>{item.title}</Text>
+            <Ionicons name="chevron-forward" size={22} color="#ccc" />
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Location & Diet */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🌍 Location & Diet</Text>
-
-        <View style={styles.locationCard}>
-          <Ionicons name="location-outline" size={20} color="#FF5722" />
-          <Text style={styles.locationText}>
-            {user.city && user.country
-              ? `${user.city}, ${user.country}`
-              : "Location not set"}
-          </Text>
-        </View>
-
-        <View style={styles.dietCard}>
-          <Ionicons name="restaurant-outline" size={20} color="#8BC34A" />
-          <Text style={styles.dietText}>
-            Diet Type: {user.diet_type || "Not specified"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>⚙️ Account Actions</Text>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleEditProfile}
-        >
-          <Ionicons name="create-outline" size={20} color="#2196F3" />
-          <Text style={styles.actionButtonText}>Edit Profile</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={handleProgress}>
-          <Ionicons name="analytics-outline" size={20} color="#FF9800" />
-          <Text style={styles.actionButtonText}>Progress Dashboard</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={handleAIChat}>
-          <Ionicons name="chatbubbles-outline" size={20} color="#4CAF50" />
-          <Text style={styles.actionButtonText}>AI Nutritionist Chat</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="settings-outline" size={20} color="#FF9800" />
-          <Text style={styles.actionButtonText}>Settings</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="help-circle-outline" size={20} color="#9C27B0" />
-          <Text style={styles.actionButtonText}>Help & Support</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.logoutButton]}
+      <View style={styles.logoutContainer}>
+        <Button
+          title="Logout"
           onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#F44336" />
-          <Text style={[styles.actionButtonText, styles.logoutText]}>
-            Logout
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color="#F44336" />
-        </TouchableOpacity>
+          variant="danger"
+          icon="log-out-outline"
+        />
       </View>
-
-      {/* Bottom Spacing */}
-      <View style={styles.bottomSpacing} />
     </ScrollView>
   );
 }
 
+const StatCard = ({ icon, label, value, unit, color }: any) => (
+  <View style={styles.statCard}>
+    <Ionicons name={icon} size={28} color={color} />
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>
+      {value} {unit}
+    </Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f8f9fa",
   },
   notLoggedInContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 30,
+    backgroundColor: "#fff",
   },
   notLoggedInTitle: {
     fontSize: 24,
@@ -270,201 +189,77 @@ const styles = StyleSheet.create({
     color: "#333",
     marginTop: 20,
     marginBottom: 10,
-    textAlign: "center",
   },
   notLoggedInSubtitle: {
     fontSize: 16,
     color: "#666",
     textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 40,
-  },
-  loginButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#4CAF50",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    marginBottom: 15,
-    width: "100%",
-    justifyContent: "center",
-  },
-  loginButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 10,
-  },
-  signUpButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#4CAF50",
-    width: "100%",
-    justifyContent: "center",
-  },
-  signUpButtonText: {
-    color: "#4CAF50",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 10,
-  },
-  header: {
-    backgroundColor: "#fff",
-    alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  profileImageContainer: {
-    marginBottom: 15,
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  userEmail: {
-    fontSize: 16,
-    color: "#666",
+    marginBottom: 30,
   },
   section: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 15,
-    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "bold",
     color: "#333",
     marginBottom: 15,
   },
-  infoGrid: {
+  statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
-  infoCard: {
+  statCard: {
     width: "48%",
-    backgroundColor: "#f8f9fa",
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
-  infoLabel: {
-    fontSize: 12,
+  statLabel: {
+    fontSize: 14,
     color: "#666",
     marginTop: 8,
-    marginBottom: 4,
   },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  goalCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f0f8f0",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-  },
-  goalLabel: {
-    fontSize: 16,
-    color: "#333",
-    marginLeft: 10,
-    marginRight: 5,
-  },
-  goalValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#4CAF50",
-    flex: 1,
-  },
-  nutritionGrid: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  nutritionCard: {
-    alignItems: "center",
-    backgroundColor: "#fff3e0",
-    padding: 15,
-    borderRadius: 10,
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  nutritionValue: {
-    fontSize: 20,
+  statValue: {
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#FF9800",
-    marginBottom: 5,
+    color: "#333",
+    marginTop: 4,
   },
-  nutritionLabel: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  locationCard: {
+  menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff3e0",
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 10,
   },
-  locationText: {
-    fontSize: 16,
-    color: "#333",
-    marginLeft: 10,
-  },
-  dietCard: {
-    flexDirection: "row",
+  menuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f1f8e9",
-    padding: 15,
-    borderRadius: 10,
+    marginRight: 16,
   },
-  dietText: {
-    fontSize: 16,
-    color: "#333",
-    marginLeft: 10,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  actionButtonText: {
+  menuItemText: {
     flex: 1,
     fontSize: 16,
+    fontWeight: "600",
     color: "#333",
-    marginLeft: 15,
   },
-  logoutButton: {
-    borderBottomWidth: 0,
-  },
-  logoutText: {
-    color: "#F44336",
-  },
-  bottomSpacing: {
-    height: 30,
+  logoutContainer: {
+    margin: 16,
+    marginTop: 20,
+    marginBottom: 40,
   },
 });

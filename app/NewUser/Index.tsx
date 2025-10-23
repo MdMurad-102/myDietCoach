@@ -1,7 +1,7 @@
 import Prom from "@/context/Prom";
 import { UserContext } from "@/context/UserContext";
 import { updateUserProfile } from "@/service/api";
-import { CalculateCalories } from "@/service/AiModel";
+import { calculateCalories } from "@/service/AiModel";
 import { isUserProfileComplete } from "@/utils/userHelpers";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -140,7 +140,7 @@ export default function Index() {
       const PROMPT = JSON.stringify(data) + Prom.CALORIESANDPRO;
       console.log("Sending prompt to AI:", PROMPT);
 
-      const AiCalculate = await CalculateCalories(PROMPT);
+      const AiCalculate = await calculateCalories(PROMPT);
       const AIResult = AiCalculate;
 
       console.log("Raw AI Response:", AIResult);
@@ -474,11 +474,9 @@ export default function Index() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <Button
-            Data={isEditMode ? "Update Profile" : "Continue"}
-            onPress={onContinue}
-            loading={loading}
-          />
+          <Button onPress={onContinue} loading={loading}>
+            {isEditMode ? "Update Profile" : "Continue"}
+          </Button>
         </View>
       </View>
     </ScrollView>

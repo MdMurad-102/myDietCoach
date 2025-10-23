@@ -1,22 +1,22 @@
-import React, { useState, useContext } from 'react';
+import { useMealContext } from '@/context/UnifiedMealContext';
+import { UserContext } from '@/context/UserContext';
+import { generateRecipeFromText } from '@/service/AiModel';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useContext, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   Alert,
   Dimensions,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { UserContext } from '@/context/UserContext';
-import { useMealContext } from '@/context/UnifiedMealContext';
-import { GenerateRecipeAi } from '@/service/AiModel';
-import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -100,7 +100,7 @@ Please provide the recipe in this EXACT JSON format:
 
 Make it practical, delicious, and nutritionally balanced. Include exact measurements.`;
 
-      const response = await GenerateRecipeAi(prompt);
+      const response = await generateRecipeFromText(prompt);
 
       // Parse AI response
       if (!response) {
@@ -118,17 +118,32 @@ Make it practical, delicious, and nutritionally balanced. Include exact measurem
           throw new Error('Invalid response format');
         }
       } catch (parseError) {
-        // Fallback: create structured data from text
+        console.warn('Failed to parse JSON, using intelligent fallback extraction');
+
+        // Enhanced fallback: extract nutritional info from text if available
+        const extractNumber = (text: string, pattern: RegExp): number => {
+          const match = text.match(pattern);
+          return match ? parseInt(match[1]) : 0;
+        };
+
+        const caloriesMatch = extractNumber(response, /(\d+)\s*(?:cal|kcal|calories)/i);
+        const proteinMatch = extractNumber(response, /(\d+)\s*g?\s*protein/i);
+        const carbsMatch = extractNumber(response, /(\d+)\s*g?\s*carb/i);
+        const fatMatch = extractNumber(response, /(\d+)\s*g?\s*fat/i);
+
+        // Estimate based on meal type if no info found
+        const defaultCalories = mealType === 'breakfast' ? 350 : mealType === 'lunch' ? 500 : mealType === 'dinner' ? 600 : 200;
+
         const fallbackRecipe: Recipe = {
           name: `Custom ${mealType.charAt(0).toUpperCase() + mealType.slice(1)}`,
           ingredients: response.split('\n').filter(line =>
             line.includes('•') || line.includes('-') || line.match(/^\d+\./)).slice(0, 10),
           instructions: response.split('\n').filter(line =>
             line.match(/^\d+\./) || line.includes('Step')).slice(0, 8),
-          calories: mealType === 'breakfast' ? 350 : mealType === 'lunch' ? 500 : mealType === 'dinner' ? 600 : 200,
-          protein: 25,
-          carbs: 45,
-          fat: 12,
+          calories: caloriesMatch || defaultCalories,
+          protein: proteinMatch || Math.round(defaultCalories * 0.15 / 4), // 15% of calories from protein
+          carbs: carbsMatch || Math.round(defaultCalories * 0.5 / 4), // 50% of calories from carbs
+          fat: fatMatch || Math.round(defaultCalories * 0.35 / 9), // 35% of calories from fat
           prepTime: '30 minutes',
           servings: 2,
         };

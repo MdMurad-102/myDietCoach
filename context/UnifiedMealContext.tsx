@@ -2,32 +2,33 @@
 import React, {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useState,
-  useCallback,
 } from "react";
 import { Platform } from "react-native";
-import { UserContext } from "./UserContext";
 import {
-  getUserRecipes,
   getUserMealPlans,
-  createMealPlan,
-  saveCustomRecipe,
+  getUserRecipes,
+  saveCustomRecipe
 } from "../service/api";
+import { UserContext } from "./UserContext";
 
 // Only import database on native platforms
-let getTodayMealPlan: any, updateMealInPlan: any, scheduleMeal: any;
+let getTodayMealPlanFromDb: any, updateMealInPlan: any, scheduleMealInDb: any, updateWaterIntakeInDb: any;
 if (Platform.OS !== 'web') {
   const recipes = require("../database/recipes");
-  getTodayMealPlan = recipes.getTodayMealPlan;
+  getTodayMealPlanFromDb = recipes.getTodayMealPlan;
   updateMealInPlan = recipes.updateMealInPlan;
-  scheduleMeal = recipes.scheduleMeal;
+  scheduleMealInDb = recipes.scheduleMeal;
+  updateWaterIntakeInDb = recipes.updateWaterIntakeInDb;
 }
 
 export interface MealItem {
   id: string;
   recipeName: string;
+  name?: string; // Add name property
   calories: number;
   protein: number;
   carbs?: number;
@@ -39,6 +40,7 @@ export interface MealItem {
   consumed?: boolean;
   mealType?: string;
   scheduledDate?: string;
+  date?: string; // Add date property
   nutritionTips?: string;
   prepTime?: string;
   difficulty?: string;
@@ -70,25 +72,16 @@ export interface DailyMealPlan {
 }
 
 export interface MealContextType {
-  // Current state
   currentDayPlan: DailyMealPlan | null;
   selectedDate: string;
-
-  // Meal data
   dailyMealPlans: Record<string, DailyMealPlan>;
   generatedMeals: MealItem[];
   savedMeals: MealItem[];
-
-  // Loading states
   isLoading: boolean;
   error: string | null;
-
-  // Core functions
   getMealPlanForDate: (date: string) => DailyMealPlan | null;
   getTodayMealPlan: () => DailyMealPlan | null;
   refreshMealData: () => void;
-
-  // Meal management
   addMealToToday: (meal: Partial<MealItem>) => Promise<void>;
   scheduleMeal: (
     meal: MealItem,
@@ -98,12 +91,11 @@ export interface MealContextType {
   saveMeal: (meal: MealItem) => Promise<void>;
   addGeneratedMeal: (meal: MealItem) => void;
   updateMealPlan: (date: string, plan: Partial<DailyMealPlan>) => void;
-
-  // Tracking functions
   markMealConsumed: (mealId: string, consumed: boolean) => void;
   updateWaterIntake: (glasses: number) => void;
   toggleDailyTask: (taskId: string) => void;
   updateCurrentProgress: (calories: number, protein: number) => void;
+  addCustomMeal: (meal: Partial<MealItem>) => Promise<void>;
 }
 
 const MealContext = createContext<MealContextType | null>(null);
@@ -124,7 +116,6 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   const userContext = useContext(UserContext);
   const user = userContext?.user;
 
-  // State
   const [dailyMealPlans, setDailyMealPlans] = useState<
     Record<string, DailyMealPlan>
   >({});
@@ -135,24 +126,17 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentDayPlan, setCurrentDayPlan] = useState<DailyMealPlan | null>(
-    null
-  );
 
   const todayString = new Date().toISOString().split("T")[0];
 
-  // Load user recipes
-  useEffect(() => {
-    async function loadRecipes() {
-      if (!user?.id) return;
+  const loadData = useCallback(async () => {
+    if (!user?.id) return;
+    setIsLoading(true);
+    setError(null);
 
-      // Skip API calls on web - use empty data
-      if (Platform.OS === 'web') {
-        setSavedMeals([]);
-        return;
-      }
-
-      try {
+    try {
+      // Load recipes
+      if (Platform.OS !== 'web') {
         const recipes = await getUserRecipes(user.id);
         setSavedMeals(
           recipes.map((recipe: any) => ({
@@ -166,27 +150,12 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
             servings: recipe.json_data?.servings || 1,
           }))
         );
-      } catch (error) {
-        console.error('Error loading recipes:', error);
+      } else {
         setSavedMeals([]);
       }
-    }
 
-    loadRecipes();
-  }, [user?.id]);
-
-  // Load meal plans
-  useEffect(() => {
-    async function loadMealPlans() {
-      if (!user?.id) return;
-
-      // Skip API calls on web - use empty data
-      if (Platform.OS === 'web') {
-        setDailyMealPlans({});
-        return;
-      }
-
-      try {
+      // Load meal plans
+      if (Platform.OS !== 'web') {
         const plans = await getUserMealPlans(user.id);
         const plansMap: Record<string, DailyMealPlan> = {};
 
@@ -209,35 +178,20 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
             consumedProtein: 0,
           };
         });
-
         setDailyMealPlans(plansMap);
-      } catch (error) {
-        console.error('Error loading meal plans:', error);
+      } else {
         setDailyMealPlans({});
       }
-    }
 
-    loadMealPlans();
-  }, [user?.id, todayString]);
-
-  // Load today's meal plan
-  useEffect(() => {
-    async function loadTodayPlan() {
-      if (!user?.id) return;
-
-      // Skip database call on web
-      if (Platform.OS === 'web' || !getTodayMealPlan) {
-        return;
-      }
-
-      try {
-        const todayPlan = await getTodayMealPlan(user.id, todayString);
+      // Load today's meal plan from local DB
+      if (Platform.OS !== 'web' && getTodayMealPlanFromDb) {
+        const todayPlan = await getTodayMealPlanFromDb(user.id, todayString);
         if (todayPlan) {
           const plan: DailyMealPlan = {
             id: todayPlan.id.toString(),
             date: todayPlan.scheduled_date,
             meals: todayPlan.meal_plan_data?.meals || [],
-            waterGlasses: 0,
+            waterGlasses: todayPlan.meal_plan_data?.waterGlasses || 0,
             tasks: [],
             goals: {
               calories: user?.calories || 2000,
@@ -254,110 +208,31 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
             ...prev,
             [todayString]: plan
           }));
-          setCurrentDayPlan(plan);
         }
-      } catch (error) {
-        console.error('Error loading today plan:', error);
       }
+    } catch (e) {
+      console.error('Failed to load data:', e);
+      setError('Failed to load meal data.');
+    } finally {
+      setIsLoading(false);
     }
+  }, [user?.id, todayString, user?.calories, user?.proteins, user?.daily_water_goal]);
 
-    loadTodayPlan();
-  }, [user?.id, todayString]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // Core functions
   const getMealPlanForDate = (date: string): DailyMealPlan | null => {
     return dailyMealPlans[date] || null;
   };
 
-  const getTodayMealPlanFunc = (): DailyMealPlan | null => {
+  const getTodayMealPlan = (): DailyMealPlan | null => {
     return getMealPlanForDate(todayString);
   };
 
-  const refreshMealData = useCallback(async () => {
-    if (!user?.id) return;
-
-    try {
-      setIsLoading(true);
-
-      // Reload recipes
-      const recipes = await getUserRecipes(user.id);
-      setSavedMeals(
-        recipes.map((recipe: any) => ({
-          id: recipe.id.toString(),
-          recipeName: recipe.recipe_name,
-          calories: recipe.json_data?.calories || 0,
-          protein: recipe.json_data?.protein || 0,
-          ingredients: recipe.json_data?.ingredients || [],
-          instructions: recipe.json_data?.instructions || [],
-          cookingTime: recipe.json_data?.cookingTime || "30 min",
-          servings: recipe.json_data?.servings || 1,
-        }))
-      );
-
-      // Reload meal plans
-      const plans = await getUserMealPlans(user.id);
-      const plansMap: Record<string, DailyMealPlan> = {};
-
-      plans.forEach((plan: any) => {
-        const planDate = plan.created_at ? new Date(plan.created_at).toISOString().split("T")[0] : todayString;
-        plansMap[planDate] = {
-          id: plan.id.toString(),
-          date: planDate,
-          meals: plan.meal_plan_data?.meals || [],
-          waterGlasses: 0,
-          tasks: [],
-          goals: {
-            calories: user?.calories || 2000,
-            protein: user?.proteins || 150,
-            water: user?.daily_water_goal || 8,
-          },
-          totalCalories: plan.total_calories || 0,
-          totalProtein: plan.total_protein || 0,
-          consumedCalories: 0,
-          consumedProtein: 0,
-        };
-      });
-
-      setDailyMealPlans(plansMap);
-
-      // Also reload today's scheduled meal plan specifically
-      if (Platform.OS !== 'web' && getTodayMealPlan) {
-        const todayPlan = await getTodayMealPlan(user.id, todayString);
-        if (todayPlan) {
-          const plan: DailyMealPlan = {
-            id: todayPlan.id.toString(),
-            date: todayPlan.scheduled_date,
-            meals: todayPlan.meal_plan_data?.meals || [],
-            waterGlasses: 0,
-            tasks: [],
-            goals: {
-              calories: user?.calories || 2000,
-              protein: user?.proteins || 150,
-              water: user?.daily_water_goal || 8,
-            },
-            totalCalories: todayPlan.total_calories || 0,
-            totalProtein: todayPlan.total_protein || 0,
-            consumedCalories: todayPlan.calories_consumed || 0,
-            consumedProtein: todayPlan.protein_consumed || 0,
-          };
-
-          setDailyMealPlans(prev => ({
-            ...prev,
-            [todayString]: plan
-          }));
-          setCurrentDayPlan(plan);
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing meal data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, todayString]);
-
   const addMealToToday = async (meal: Partial<MealItem>): Promise<void> => {
-    if (!user?.id) {
-      throw new Error("User not logged in");
+    if (!user?.id || Platform.OS === 'web' || !scheduleMealInDb || !getTodayMealPlanFromDb || !updateMealInPlan) {
+      throw new Error("User not logged in or DB not available");
     }
 
     try {
@@ -368,19 +243,13 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
         recipeName: meal.recipeName || "Custom Meal",
         calories: meal.calories || 0,
         protein: meal.protein || 0,
-        ingredients: meal.ingredients || [],
-        instructions: meal.instructions || [],
-        cookingTime: meal.cookingTime || "15 min",
-        servings: meal.servings || 1,
-        mealType: meal.mealType || "snacks",
+        ...meal
       };
 
-      // Get current plan or create new one
-      let todayPlan = await getTodayMealPlan(user.id, todayString);
+      let todayPlan = await getTodayMealPlanFromDb(user.id, todayString);
 
       if (!todayPlan) {
-        // Create new meal plan for today
-        await scheduleMeal(
+        await scheduleMealInDb(
           user.id,
           todayString,
           mealData.mealType,
@@ -391,19 +260,15 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
           { meals: [mealData] }
         );
       } else {
-        // Update existing plan
         const currentMeals = todayPlan.meal_plan_data?.meals || [];
         const updatedMealPlanData = {
           ...todayPlan.meal_plan_data,
           meals: [...currentMeals, mealData]
         };
-
         await updateMealInPlan(todayPlan.id, updatedMealPlanData);
       }
 
-      // Refresh data
-      await refreshMealData();
-
+      await loadData();
       console.log("✅ Meal added to today successfully:", mealData.recipeName);
     } catch (error) {
       console.error("❌ Error adding meal to today:", error);
@@ -414,17 +279,16 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     }
   };
 
-  const scheduleMealFunc = async (
+  const scheduleMeal = async (
     meal: MealItem,
     date: string,
     mealType: string
   ): Promise<void> => {
-    if (!user?.id) return;
+    if (!user?.id || Platform.OS === 'web' || !scheduleMealInDb) return;
 
     try {
       setIsLoading(true);
-
-      await scheduleMeal(
+      await scheduleMealInDb(
         user.id,
         date,
         mealType,
@@ -434,8 +298,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
         undefined,
         { meals: [meal] }
       );
-
-      await refreshMealData();
+      await loadData();
       console.log("✅ Meal scheduled successfully");
     } catch (error) {
       console.error("❌ Error scheduling meal:", error);
@@ -446,11 +309,10 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   };
 
   const saveMeal = async (meal: MealItem): Promise<void> => {
-    if (!user?.id) return;
+    if (!user?.id || Platform.OS === 'web') return;
 
     try {
       setIsLoading(true);
-
       await saveCustomRecipe(
         user.id,
         meal.recipeName,
@@ -462,8 +324,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
         meal.servings || 1,
         meal.mealType || "snacks"
       );
-
-      await refreshMealData();
+      await loadData();
       console.log("✅ Meal saved successfully");
     } catch (error) {
       console.error("❌ Error saving meal:", error);
@@ -474,7 +335,35 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   };
 
   const addGeneratedMeal = (meal: MealItem) => {
-    setGeneratedMeals((prev) => [...prev, meal]);
+    setGeneratedMeals(prev => [meal, ...prev]);
+  };
+
+  const addCustomMeal = async (meal: Partial<MealItem>) => {
+    if (!user?.id || !meal.date) return;
+
+    const newMeal: MealItem = {
+      id: `custom-${Date.now()}`,
+      recipeName: meal.name || "Custom Meal",
+      name: meal.name || "Custom Meal",
+      calories: meal.calories || 0,
+      protein: meal.protein || 0,
+      consumed: true,
+      ...meal,
+    };
+
+    if (Platform.OS !== 'web' && scheduleMealInDb) {
+      await scheduleMealInDb(
+        user.id,
+        meal.date,
+        meal.mealType || 'snack',
+        newMeal.calories,
+        newMeal.protein,
+        undefined,
+        undefined,
+        { meals: [newMeal] }
+      );
+      await loadData(); // Refresh data
+    }
   };
 
   const updateMealPlan = (date: string, plan: Partial<DailyMealPlan>) => {
@@ -499,15 +388,29 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     });
   };
 
-  const updateWaterIntake = (glasses: number) => {
-    const today = getTodayMealPlanFunc();
+  const updateWaterIntake = async (glasses: number) => {
+    if (!user?.id || Platform.OS === 'web' || !updateWaterIntakeInDb) return;
+
+    const today = getTodayMealPlan();
     if (today) {
-      updateMealPlan(todayString, { waterGlasses: glasses });
+      try {
+        setIsLoading(true);
+        await updateWaterIntakeInDb(user.id, todayString, glasses);
+        // Optimistically update the UI
+        updateMealPlan(todayString, { waterGlasses: glasses });
+        // Refresh data from the source to ensure consistency
+        await loadData();
+      } catch (error) {
+        console.error("❌ Error updating water intake in DB:", error);
+        setError("Failed to update water intake.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   const toggleDailyTask = (taskId: string) => {
-    const today = getTodayMealPlanFunc();
+    const today = getTodayMealPlan();
     if (today) {
       const updatedTasks = today.tasks.map((task) =>
         task.id === taskId ? { ...task, completed: !task.completed } : task
@@ -517,7 +420,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   };
 
   const updateCurrentProgress = (calories: number, protein: number) => {
-    const today = getTodayMealPlanFunc();
+    const today = getTodayMealPlan();
     if (today) {
       updateMealPlan(todayString, {
         consumedCalories: calories,
@@ -527,7 +430,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   };
 
   const contextValue: MealContextType = {
-    currentDayPlan,
+    currentDayPlan: getTodayMealPlan(),
     selectedDate,
     dailyMealPlans,
     generatedMeals,
@@ -535,10 +438,11 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     isLoading,
     error,
     getMealPlanForDate,
-    getTodayMealPlan: getTodayMealPlanFunc,
-    refreshMealData,
+    getTodayMealPlan,
+
+    refreshMealData: loadData,
     addMealToToday,
-    scheduleMeal: scheduleMealFunc,
+    scheduleMeal,
     saveMeal,
     addGeneratedMeal,
     updateMealPlan,
@@ -546,6 +450,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     updateWaterIntake,
     toggleDailyTask,
     updateCurrentProgress,
+    addCustomMeal,
   };
 
   return (

@@ -1,13 +1,14 @@
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-  View,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 export default function QuickActions() {
   const router = useRouter();
@@ -17,28 +18,38 @@ export default function QuickActions() {
       id: "generate",
       title: "Generate Recipe",
       icon: "sparkles",
-      color: "#FF6B6B",
-      onPress: () => router.push("/recipeGenerator" as any),
+      colors: ["#FF6B6B", "#FF8E53"],
+      onPress: () => router.push("/recipeGenerator"),
     },
     {
       id: "meals",
       title: "View Meals",
       icon: "restaurant",
-      color: "#96CEB4",
+      colors: ["#96CEB4", "#45B7D1"],
       onPress: () => router.push("/(tabs)/Meals"),
     },
     {
       id: "progress",
       title: "My Progress",
       icon: "trending-up",
-      color: "#45B7D1",
+      colors: ["#8E44AD", "#9B59B6"],
       onPress: () => router.push("/Progress"),
+    },
+    {
+      id: "ai-chat",
+      title: "AI Assistant",
+      icon: "chatbubbles",
+      colors: ["#667eea", "#764ba2"],
+      onPress: () => router.push("/AIChat"),
     },
   ];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Quick Actions</Text>
+      <View style={styles.cardHeader}>
+        <Ionicons name="flash" size={24} color="#667eea" />
+        <Text style={styles.title}>Quick Actions</Text>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -47,19 +58,13 @@ export default function QuickActions() {
         {quickActionItems.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={[styles.actionCard, { borderLeftColor: item.color }]}
             onPress={item.onPress}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: item.color + "20" },
-              ]}
-            >
-              <Ionicons name={item.icon as any} size={24} color={item.color} />
-            </View>
-            <Text style={styles.actionTitle}>{item.title}</Text>
+            <LinearGradient colors={item.colors as [string, string]} style={styles.actionCard}>
+              <Ionicons name={item.icon as any} size={32} color="#fff" />
+              <Text style={styles.actionTitle}>{item.title}</Text>
+            </LinearGradient>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -69,46 +74,44 @@ export default function QuickActions() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingHorizontal: 8,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "bold",
     color: "#333",
-    marginBottom: 15,
+    marginLeft: 8,
   },
   actionsContainer: {
-    paddingRight: 20,
+    paddingLeft: 8,
+    paddingRight: 16,
   },
   actionCard: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
-    padding: 15,
-    marginRight: 15,
-    alignItems: "center",
-    minWidth: 100,
-    borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
+    padding: 20,
+    marginRight: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    minWidth: 120,
+    minHeight: 120,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   actionTitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#333",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
     textAlign: "center",
+    marginTop: 8,
   },
 });

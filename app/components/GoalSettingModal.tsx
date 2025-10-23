@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,10 @@ import {
   Alert,
   ScrollView,
   Platform,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Button from './Button';
 
 interface GoalSettingModalProps {
   visible: boolean;
@@ -19,299 +20,170 @@ interface GoalSettingModalProps {
   onSaveGoal: (goalData: any) => void;
 }
 
+const goalTypes = [
+  { id: 'weight', label: 'Weight', icon: 'scale-outline' },
+  { id: 'fitness', label: 'Fitness', icon: 'barbell-outline' },
+  { id: 'nutrition', label: 'Nutrition', icon: 'nutrition-outline' },
+];
+
+interface GoalTypeSelectorProps {
+  selected: string;
+  onSelect: (type: string) => void;
+}
+
+const GoalTypeSelector: React.FC<GoalTypeSelectorProps> = ({ selected, onSelect }) => (
+  <View style={styles.goalTypeContainer}>
+    {goalTypes.map(type => (
+      <TouchableOpacity
+        key={type.id}
+        style={[
+          styles.goalTypeChip,
+          selected === type.id && styles.goalTypeChipActive,
+        ]}
+        onPress={() => onSelect(type.id)}
+      >
+        <Ionicons
+          name={type.icon as any}
+          size={20}
+          color={selected === type.id ? '#fff' : '#667eea'}
+        />
+        <Text
+          style={[
+            styles.goalTypeLabel,
+            selected === type.id && styles.goalTypeLabelActive,
+          ]}
+        >
+          {type.label}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
 const GoalSettingModal: React.FC<GoalSettingModalProps> = ({
   visible,
   onClose,
   onSaveGoal,
 }) => {
-  const [goalType, setGoalType] = useState<string>("weight");
-  const [targetWeight, setTargetWeight] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-  const [weeklyCalories, setWeeklyCalories] = useState("");
-  const [dailyProtein, setDailyProtein] = useState("");
-  const [weeklyWorkouts, setWeeklyWorkouts] = useState("");
-
-  const goalTypes = [
-    {
-      id: "weight",
-      label: "🎯 Weight Goal",
-      icon: "scale",
-      description: "Set your target weight",
-    },
-    {
-      id: "fitness",
-      label: "💪 Fitness Goal",
-      icon: "fitness",
-      description: "Set workout targets",
-    },
-    {
-      id: "nutrition",
-      label: "🥗 Nutrition Goal",
-      icon: "nutrition",
-      description: "Set daily nutrition targets",
-    },
-  ];
+  const [goalType, setGoalType] = useState<string>('weight');
+  const [targetWeight, setTargetWeight] = useState('');
+  const [targetDate, setTargetDate] = useState('');
+  const [weeklyWorkouts, setWeeklyWorkouts] = useState('');
+  const [dailyCalories, setDailyCalories] = useState('');
+  const [dailyProtein, setDailyProtein] = useState('');
 
   const handleSave = () => {
-    if (goalType === "weight" && !targetWeight) {
-      Alert.alert("Missing Info", "Please enter your target weight");
+    if (goalType === 'weight' && !targetWeight) {
+      Alert.alert('Missing Info', 'Please enter your target weight.');
       return;
     }
 
     const goalData = {
       type: goalType,
-      targetWeight: targetWeight ? parseFloat(targetWeight) : undefined,
+      targetWeight: targetWeight || undefined,
       targetDate: targetDate || undefined,
-      weeklyCalories: weeklyCalories ? parseInt(weeklyCalories) : undefined,
-      dailyProtein: dailyProtein ? parseInt(dailyProtein) : undefined,
-      weeklyWorkouts: weeklyWorkouts ? parseInt(weeklyWorkouts) : undefined,
+      weeklyWorkouts: weeklyWorkouts || undefined,
+      dailyCalories: dailyCalories || undefined,
+      dailyProtein: dailyProtein || undefined,
       createdAt: new Date().toISOString(),
     };
 
     onSaveGoal(goalData);
-
-    // Reset form
-    setTargetWeight("");
-    setTargetDate("");
-    setWeeklyCalories("");
-    setDailyProtein("");
-    setWeeklyWorkouts("");
-
-    Alert.alert(
-      "Success! 🎉",
-      "Your goal has been set! Let's work towards it together!",
-      [{ text: "Let's Go!", onPress: onClose }]
-    );
+    Alert.alert('Success!', 'Your new goal is set. Let\'s achieve it!', [
+      { text: 'Awesome!', onPress: onClose },
+    ]);
   };
 
-  const handleReset = () => {
-    setTargetWeight("");
-    setTargetDate("");
-    setWeeklyCalories("");
-    setDailyProtein("");
-    setWeeklyWorkouts("");
+  const renderForm = () => {
+    switch (goalType) {
+      case 'weight':
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Weight Goal</Text>
+            <TextInput
+              style={styles.input}
+              value={targetWeight}
+              onChangeText={setTargetWeight}
+              placeholder="Target Weight (e.g., 70 kg)"
+              keyboardType="numeric"
+              placeholderTextColor="#999"
+            />
+            <TextInput
+              style={styles.input}
+              value={targetDate}
+              onChangeText={setTargetDate}
+              placeholder="Target Date (e.g., 2024-12-31)"
+              placeholderTextColor="#999"
+            />
+          </>
+        );
+      case 'fitness':
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Fitness Goal</Text>
+            <TextInput
+              style={styles.input}
+              value={weeklyWorkouts}
+              onChangeText={setWeeklyWorkouts}
+              placeholder="Workouts per week (e.g., 4)"
+              keyboardType="numeric"
+              placeholderTextColor="#999"
+            />
+          </>
+        );
+      case 'nutrition':
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Nutrition Goal</Text>
+            <TextInput
+              style={styles.input}
+              value={dailyCalories}
+              onChangeText={setDailyCalories}
+              placeholder="Daily Calorie Target (e.g., 2000 kcal)"
+              keyboardType="numeric"
+              placeholderTextColor="#999"
+            />
+            <TextInput
+              style={styles.input}
+              value={dailyProtein}
+              onChangeText={setDailyProtein}
+              placeholder="Daily Protein Target (e.g., 150 g)"
+              keyboardType="numeric"
+              placeholderTextColor="#999"
+            />
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      transparent={false}
-    >
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
-        <LinearGradient colors={["#4CAF50", "#45A049"]} style={styles.header}>
+        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+          <Text style={styles.title}>Set a New Goal</Text>
+          <Text style={styles.subtitle}>Define what you want to achieve.</Text>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.title}>Set Your Goals</Text>
-            <Text style={styles.subtitle}>
-              Let's create your success plan! 🚀
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-            <Ionicons name="refresh" size={24} color="#fff" />
+            <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
         </LinearGradient>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.description}>
-            Setting clear goals helps you stay motivated and track your
-            progress! 💪
-          </Text>
-
-          {/* Goal Type Selector */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎯 Choose Your Goal Type</Text>
-            <View style={styles.goalTypeContainer}>
-              {goalTypes.map((type) => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={[
-                    styles.goalTypeCard,
-                    goalType === type.id && styles.goalTypeCardActive,
-                  ]}
-                  onPress={() => setGoalType(type.id)}
-                >
-                  <View style={styles.goalTypeIcon}>
-                    <Ionicons
-                      name={type.icon as any}
-                      size={24}
-                      color={goalType === type.id ? "#4CAF50" : "#7f8c8d"}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.goalTypeLabel,
-                      goalType === type.id && styles.goalTypeLabelActive,
-                    ]}
-                  >
-                    {type.label}
-                  </Text>
-                  <Text style={styles.goalTypeDescription}>
-                    {type.description}
-                  </Text>
-                  {goalType === type.id && (
-                    <View style={styles.selectedIndicator}>
-                      <Ionicons name="checkmark" size={16} color="#4CAF50" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Text style={styles.sectionTitle}>What's Your Focus?</Text>
+            <GoalTypeSelector selected={goalType} onSelect={setGoalType} />
           </View>
 
-          {/* Weight Goal Form */}
-          {goalType === "weight" && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>⚖️ Weight Goal Details</Text>
+          <View style={styles.section}>{renderForm()}</View>
 
-              <View style={styles.inputGroup}>
-                <View style={styles.inputHeader}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="flag" size={20} color="#4CAF50" />
-                  </View>
-                  <View style={styles.inputTitleContainer}>
-                    <Text style={styles.inputLabel}>🎯 Target Weight</Text>
-                    <Text style={styles.inputHint}>
-                      What's your goal weight?
-                    </Text>
-                  </View>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={targetWeight}
-                  onChangeText={setTargetWeight}
-                  placeholder="e.g., 70 kg"
-                  placeholderTextColor="#999"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.inputHeader}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="calendar" size={20} color="#2196F3" />
-                  </View>
-                  <View style={styles.inputTitleContainer}>
-                    <Text style={styles.inputLabel}>
-                      📅 Target Date (Optional)
-                    </Text>
-                    <Text style={styles.inputHint}>
-                      When do you want to achieve this?
-                    </Text>
-                  </View>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={targetDate}
-                  onChangeText={setTargetDate}
-                  placeholder="e.g., 2024-12-31"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Fitness Goal Form */}
-          {goalType === "fitness" && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🏋️‍♂️ Fitness Goal Details</Text>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.inputHeader}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="fitness" size={20} color="#FF6B6B" />
-                  </View>
-                  <View style={styles.inputTitleContainer}>
-                    <Text style={styles.inputLabel}>💪 Weekly Workouts</Text>
-                    <Text style={styles.inputHint}>
-                      How many times per week?
-                    </Text>
-                  </View>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={weeklyWorkouts}
-                  onChangeText={setWeeklyWorkouts}
-                  placeholder="e.g., 4 times per week"
-                  placeholderTextColor="#999"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Nutrition Goal Form */}
-          {goalType === "nutrition" && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🥗 Nutrition Goal Details</Text>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.inputHeader}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="flame" size={20} color="#FF6B6B" />
-                  </View>
-                  <View style={styles.inputTitleContainer}>
-                    <Text style={styles.inputLabel}>🔥 Daily Calories</Text>
-                    <Text style={styles.inputHint}>
-                      Target calories per day
-                    </Text>
-                  </View>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={weeklyCalories}
-                  onChangeText={setWeeklyCalories}
-                  placeholder="e.g., 2000 calories"
-                  placeholderTextColor="#999"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.inputHeader}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="nutrition" size={20} color="#4ECDC4" />
-                  </View>
-                  <View style={styles.inputTitleContainer}>
-                    <Text style={styles.inputLabel}>💪 Daily Protein</Text>
-                    <Text style={styles.inputHint}>
-                      Target protein in grams
-                    </Text>
-                  </View>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={dailyProtein}
-                  onChangeText={setDailyProtein}
-                  placeholder="e.g., 120 grams"
-                  placeholderTextColor="#999"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <LinearGradient
-              colors={["#4CAF50", "#45A049"]}
-              style={styles.saveButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Ionicons name="flag" size={20} color="#fff" />
-              <Text style={styles.saveButtonText}>Set My Goal</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <View style={styles.encouragementBox}>
-            <Text style={styles.encouragementText}>
-              🌟 Great choice! Setting goals is the first step towards success!
-              We'll help you track your progress every step of the way! 🌟
-            </Text>
-          </View>
+          <Button
+            title="Save Goal"
+            onPress={handleSave}
+            variant="primary"
+            icon="checkmark-circle-outline"
+            style={{ marginTop: 20 }}
+          />
         </ScrollView>
       </View>
     </Modal>
@@ -321,199 +193,87 @@ const GoalSettingModal: React.FC<GoalSettingModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: '#f8f9fa',
   },
   header: {
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
-    paddingBottom: 25,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 30,
     paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerContent: {
-    alignItems: "center",
-    flex: 1,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  resetButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 5,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   subtitle: {
     fontSize: 16,
-    color: "#fff",
-    opacity: 0.9,
-    textAlign: "center",
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 5,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 55 : 35,
+    right: 20,
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  description: {
-    fontSize: 16,
-    color: "#7f8c8d",
-    textAlign: "center",
-    marginBottom: 25,
-    fontStyle: "italic",
+    padding: 20,
   },
   section: {
-    marginBottom: 25,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#2c3e50",
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 15,
   },
   goalTypeContainer: {
-    gap: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
-  goalTypeCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: "#e9ecef",
-    position: "relative",
+  goalTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 25,
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
   },
-  goalTypeCardActive: {
-    borderColor: "#4CAF50",
-    backgroundColor: "#4CAF50" + "10",
-  },
-  goalTypeIcon: {
-    marginBottom: 10,
+  goalTypeChipActive: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
   },
   goalTypeLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: 5,
-  },
-  goalTypeLabelActive: {
-    color: "#4CAF50",
-  },
-  goalTypeDescription: {
     fontSize: 14,
-    color: "#7f8c8d",
-    fontStyle: "italic",
-  },
-  selectedIndicator: {
-    position: "absolute",
-    top: 15,
-    right: 15,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#4CAF50" + "20",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f8f9fa",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  inputTitleContainer: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: 2,
-  },
-  inputHint: {
-    fontSize: 12,
-    color: "#7f8c8d",
-    fontStyle: "italic",
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e9ecef",
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: "#2c3e50",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  saveButton: {
-    borderRadius: 25,
-    overflow: "hidden",
-    marginTop: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  saveButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
+    color: '#4338ca',
     marginLeft: 8,
   },
-  encouragementBox: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+  goalTypeLabelActive: {
+    color: '#fff',
   },
-  encouragementText: {
-    fontSize: 14,
-    color: "#4CAF50",
-    textAlign: "center",
-    fontWeight: "500",
-    lineHeight: 20,
+  input: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    color: '#333',
   },
 });
 

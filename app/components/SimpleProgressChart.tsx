@@ -1,6 +1,8 @@
-import React from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Button from './Button'; // Assuming you have a standard Button component
 
 interface DataPoint {
   date: string;
@@ -12,11 +14,12 @@ interface SimpleProgressChartProps {
   title: string;
   color: string;
   unit: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   targetValue?: number;
+  onAddData?: () => void; // Optional: for a button to add new data
 }
 
-const { width: screenWidth } = Dimensions.get("window");
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function SimpleProgressChart({
   data,
@@ -25,344 +28,272 @@ export default function SimpleProgressChart({
   unit,
   icon,
   targetValue,
+  onAddData,
 }: SimpleProgressChartProps) {
   if (!data || data.length === 0) {
     return (
-      <View style={styles.container}>
+      <LinearGradient colors={['#f5f7fa', '#e9ecf2']} style={styles.container}>
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            <View
-              style={[styles.iconContainer, { backgroundColor: color + "20" }]}
-            >
-              <Ionicons name={icon as any} size={20} color={color} />
+            <View style={[styles.iconContainer, { backgroundColor: `${color}30` }]}>
+              <Ionicons name={icon} size={22} color={color} />
             </View>
             <Text style={styles.title}>{title}</Text>
           </View>
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>📊 No data yet</Text>
+          <Ionicons name="stats-chart-outline" size={48} color="#bdc3c7" />
+          <Text style={styles.emptyText}>No Data Available</Text>
           <Text style={styles.emptySubtext}>
-            Start tracking to see your amazing progress!
+            Start tracking your progress to see your chart.
           </Text>
+          {onAddData && (
+            <Button
+              title="Add First Entry"
+              onPress={onAddData}
+              variant="primary"
+              style={{ marginTop: 20 }}
+            />
+          )}
         </View>
-      </View>
+      </LinearGradient>
     );
   }
 
   const latestValue = data[data.length - 1]?.value || 0;
-  const previousValue =
-    data.length >= 2 ? data[data.length - 2]?.value : latestValue;
+  const previousValue = data.length >= 2 ? data[data.length - 2]?.value : latestValue;
   const change = latestValue - previousValue;
-  const percentChange =
-    previousValue !== 0 ? (change / previousValue) * 100 : 0;
+  const percentChange = previousValue !== 0 ? (change / previousValue) * 100 : 0;
 
-  // Create simple bar chart with last 7 data points
   const chartData = data.slice(-7);
-  const maxValue = Math.max(...chartData.map((d) => d.value));
+  const maxValue = Math.max(...chartData.map((d) => d.value), targetValue || 0);
   const minValue = Math.min(...chartData.map((d) => d.value));
-  const range = maxValue - minValue || 1;
 
-  // Calculate progress towards target
-  const progressToTarget = targetValue
-    ? (latestValue / targetValue) * 100
-    : null;
+  const progressToTarget = targetValue ? (latestValue / targetValue) * 100 : null;
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#ffffff', '#fdfdff']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View
-            style={[styles.iconContainer, { backgroundColor: color + "20" }]}
-          >
-            <Ionicons name={icon as any} size={20} color={color} />
+          <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+            <Ionicons name={icon} size={22} color={color} />
           </View>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>Last 7 days</Text>
+            <Text style={styles.subtitle}>Last 7 entries</Text>
           </View>
         </View>
 
-        {/* Change indicator */}
         {data.length >= 2 && (
           <View style={styles.changeContainer}>
             <Ionicons
-              name={change >= 0 ? "trending-up" : "trending-down"}
-              size={16}
-              color={change >= 0 ? "#4CAF50" : "#FF6B6B"}
+              name={change >= 0 ? 'arrow-up' : 'arrow-down'}
+              size={14}
+              color={change >= 0 ? '#27ae60' : '#c0392b'}
             />
             <Text
               style={[
                 styles.changeText,
-                { color: change >= 0 ? "#4CAF50" : "#FF6B6B" },
+                { color: change >= 0 ? '#27ae60' : '#c0392b' },
               ]}
             >
-              {change >= 0 ? "+" : ""}
               {Math.abs(percentChange).toFixed(1)}%
             </Text>
           </View>
         )}
       </View>
 
-      {/* Current Value */}
+      {/* Current Value & Target */}
       <View style={styles.valueSection}>
         <View style={styles.currentValueContainer}>
           <Text style={[styles.currentValue, { color }]}>
-            {latestValue.toFixed(unit === "kg" || unit === "g" ? 1 : 0)}
+            {latestValue.toFixed(unit === 'kg' || unit === 'g' ? 1 : 0)}
           </Text>
           <Text style={styles.unit}>{unit}</Text>
         </View>
 
-        {/* Target progress */}
         {targetValue && (
           <View style={styles.targetContainer}>
-            <Text style={styles.targetLabel}>
-              Goal: {targetValue}
-              {unit}
-            </Text>
+            <Text style={styles.targetLabel}>Goal: {targetValue} {unit}</Text>
             <View style={styles.progressBar}>
               <View
                 style={[
                   styles.progressFill,
                   {
                     width: `${Math.min(progressToTarget!, 100)}%`,
-                    backgroundColor:
-                      progressToTarget! >= 100 ? "#4CAF50" : color,
+                    backgroundColor: color,
                   },
                 ]}
               />
             </View>
-            <Text style={styles.progressText}>
-              {progressToTarget!.toFixed(0)}% of goal
-            </Text>
           </View>
         )}
       </View>
 
-      {/* Simple Bar Chart */}
+      {/* Bar Chart */}
       <View style={styles.chartContainer}>
-        <View style={styles.barsContainer}>
-          {chartData.map((point, index) => {
-            const height =
-              range > 0 ? ((point.value - minValue) / range) * 60 + 10 : 10;
-            const isLatest = index === chartData.length - 1;
-
-            return (
-              <View key={index} style={styles.barColumn}>
+        {chartData.map((point, index) => {
+          const barHeight = maxValue > 0 ? (point.value / maxValue) * 100 : 0;
+          const isLatest = index === chartData.length - 1;
+          return (
+            <View key={index} style={styles.barWrapper}>
+              <View style={styles.barInner}>
                 <View
                   style={[
                     styles.bar,
                     {
-                      height,
-                      backgroundColor: isLatest ? color : color + "60",
+                      height: `${barHeight}%`,
+                      backgroundColor: isLatest ? color : `${color}80`,
                     },
                   ]}
                 />
-                <Text style={styles.barLabel}>
-                  {point.date.split("-")[2] || index + 1}
-                </Text>
               </View>
-            );
-          })}
-        </View>
+              <Text style={styles.barLabel}>
+                {new Date(point.date).getDate()}
+              </Text>
+            </View>
+          );
+        })}
       </View>
-
-      {/* Summary */}
-      <View style={styles.summary}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{data.length}</Text>
-          <Text style={styles.summaryLabel}>Total entries</Text>
-        </View>
-
-        <View style={styles.summaryItem}>
-          <Text
-            style={[
-              styles.summaryValue,
-              { color: change >= 0 ? "#4CAF50" : "#FF6B6B" },
-            ]}
-          >
-            {change >= 0 ? "+" : ""}
-            {change.toFixed(1)}
-            {unit}
-          </Text>
-          <Text style={styles.summaryLabel}>Latest change</Text>
-        </View>
-
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>
-            {(
-              chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length
-            ).toFixed(1)}
-            {unit}
-          </Text>
-          <Text style={styles.summaryLabel}>Weekly avg</Text>
-        </View>
-      </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
     borderRadius: 20,
     padding: 20,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    marginBottom: 20,
+    shadowColor: '#4a4a6a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
-  titleContainer: {
-    flex: 1,
-  },
+  titleContainer: {},
   title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#2c3e50",
-    marginBottom: 2,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#34495e',
   },
   subtitle: {
-    fontSize: 12,
-    color: "#7f8c8d",
-    fontStyle: "italic",
+    fontSize: 13,
+    color: '#7f8c8d',
   },
   changeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f4f4f4',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   changeText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: 'bold',
     marginLeft: 4,
   },
   valueSection: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 25,
   },
   currentValueContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   currentValue: {
-    fontSize: 36,
-    fontWeight: "bold",
+    fontSize: 40,
+    fontWeight: 'bold',
   },
   unit: {
     fontSize: 18,
-    color: "#7f8c8d",
+    fontWeight: '500',
+    color: '#7f8c8d',
     marginLeft: 6,
   },
   targetContainer: {
-    marginTop: 10,
+    alignItems: 'flex-end',
   },
   targetLabel: {
-    fontSize: 12,
-    color: "#7f8c8d",
+    fontSize: 13,
+    color: '#7f8c8d',
     marginBottom: 6,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 4,
-    marginBottom: 4,
+    width: 100,
+    height: 6,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 3,
   },
   progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 11,
-    color: "#7f8c8d",
-    fontWeight: "500",
+    height: '100%',
+    borderRadius: 3,
   },
   chartContainer: {
-    height: 80,
-    marginBottom: 15,
+    flexDirection: 'row',
+    height: 120,
+    alignItems: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f2f5',
+    paddingTop: 20,
   },
-  barsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    height: "100%",
-    paddingTop: 10,
-  },
-  barColumn: {
-    alignItems: "center",
+  barWrapper: {
     flex: 1,
-    maxWidth: 40,
+    alignItems: 'center',
+  },
+  barInner: {
+    height: '100%',
+    width: 12,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 6,
+    justifyContent: 'flex-end',
   },
   bar: {
-    width: 20,
-    borderRadius: 10,
-    marginBottom: 5,
-    minHeight: 10,
+    width: '100%',
+    borderRadius: 6,
   },
   barLabel: {
-    fontSize: 10,
-    color: "#95a5a6",
-    fontWeight: "500",
-  },
-  summary: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-  },
-  summaryItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#2c3e50",
-    marginBottom: 2,
-  },
-  summaryLabel: {
     fontSize: 11,
-    color: "#95a5a6",
-    textAlign: "center",
+    color: '#95a5a6',
+    marginTop: 8,
   },
   emptyState: {
-    alignItems: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 16,
-    color: "#7f8c8d",
-    fontWeight: "600",
-    marginBottom: 5,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#7f8c8d',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#95a5a6",
-    textAlign: "center",
-    fontStyle: "italic",
+    color: '#95a5a6',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });

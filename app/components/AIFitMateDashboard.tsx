@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '@/context/UserContext';
 import { useRouter } from 'expo-router';
-import { GenerateRecipeAi } from '@/service/AiModel';
+import { generateRecipeFromText } from '@/service/AiModel';
 import { initializeNotifications, requestNotificationPermissions } from '@/service/dailyReminders';
 
 const { width } = Dimensions.get('window');
@@ -88,7 +88,7 @@ Format your response as JSON:
 }
 `;
 
-            const response = await GenerateRecipeAi(prompt);
+            const response = await generateRecipeFromText(prompt);
 
             try {
                 const cleanedResponse = response

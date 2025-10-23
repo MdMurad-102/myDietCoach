@@ -1,10 +1,11 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import ProgressDashboard from "../components/ProgressDashboard";
+import { View, StyleSheet, StatusBar } from "react-native";
+import ProgressDashboard from "@/app/components/ProgressDashboard";
 
-export default function Progress() {
+export default function ProgressScreen() {
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <ProgressDashboard />
     </View>
   );
@@ -13,5 +14,6 @@ export default function Progress() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f8f9fa",
   },
 });

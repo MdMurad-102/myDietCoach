@@ -1,178 +1,120 @@
-import { UserContext } from "@/context/UserContext";
-import { Ionicons } from "@expo/vector-icons";
-import React, { useContext, useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View, Platform } from "react-native";
+import React, { useContext } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Progress from 'react-native-progress';
+import { useMealContext } from '@/context/UnifiedMealContext';
 
-// Only import database on native platforms
-let getWaterTracking: any, trackWater: any;
-if (Platform.OS !== 'web') {
-  const tracking = require("@/database/tracking");
-  getWaterTracking = tracking.getWaterTracking;
-  trackWater = tracking.trackWater;
-}
+export default function SimpleWaterTracker() {
+  const { currentDayPlan, updateWaterIntake } = useMealContext();
+  const waterConsumed = currentDayPlan?.waterGlasses || 0;
+  const waterGoal = currentDayPlan?.goals.water || 8;
+  const progress = waterGoal > 0 ? waterConsumed / waterGoal : 0;
 
-const SimpleWaterTracker: React.FC = () => {
-  const context = useContext(UserContext);
-  const [waterConsumed, setWaterConsumed] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  if (!context) {
-    throw new Error("UserContext must be used within a UserProvider");
-  }
-
-  const { user } = context;
-  const today = new Date().toISOString().split("T")[0];
-  const waterGoal = user?.daily_water_goal || 2000;
-  const progressPercentage = Math.min((waterConsumed / waterGoal) * 100, 100);
-
-  // Load water data
-  useEffect(() => {
-    async function loadWaterData() {
-      if (!user?.id) return;
-
-      // Skip database on web - use local state only
-      if (Platform.OS === 'web') {
-        return;
-      }
-
-      try {
-        const data = await getWaterTracking(user.id, today);
-        if (data) {
-          setWaterConsumed(data.water_consumed);
-        }
-      } catch (error) {
-        console.error("Error loading water data:", error);
-      }
+  const handleAddWater = () => {
+    if (waterConsumed < waterGoal) {
+      updateWaterIntake(waterConsumed + 1);
     }
+  };
 
-    loadWaterData();
-  }, [user?.id, today]);
-
-  const handleAddWater = async (amount: number) => {
-    if (!user?.id || loading) return;
-
-    try {
-      setLoading(true);
-
-      // On web, just update local state (no database)
-      if (Platform.OS === 'web') {
-        setWaterConsumed(prev => prev + amount);
-        setLoading(false);
-        return;
-      }
-
-      await trackWater(user.id, today, amount);
-
-      // Reload water data
-      const data = await getWaterTracking(user.id, today);
-      if (data) {
-        setWaterConsumed(data.water_consumed);
-      }
-    } catch (error) {
-      console.error("Error adding water:", error);
-    } finally {
-      setLoading(false);
+  const handleRemoveWater = () => {
+    if (waterConsumed > 0) {
+      updateWaterIntake(waterConsumed - 1);
     }
   };
 
   return (
-    <View style={styles.card}>
+    <LinearGradient colors={['#E0F7FA', '#B2EBF2']} style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="water" size={24} color="#2196F3" />
+        <Ionicons name="water-outline" size={26} color="#00796B" />
         <Text style={styles.title}>Water Intake</Text>
       </View>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View
-            style={[styles.progressFill, { width: `${progressPercentage}%` }]}
+      <View style={styles.tracker}>
+        <TouchableOpacity onPress={handleRemoveWater} style={styles.button}>
+          <Ionicons name="remove-outline" size={30} color="#00796B" />
+        </TouchableOpacity>
+
+        <View style={styles.progressContainer}>
+          <Progress.Circle
+            size={120}
+            progress={progress}
+            showsText={false}
+            color="#00796B"
+            unfilledColor="rgba(0, 121, 107, 0.1)"
+            borderWidth={0}
+            thickness={10}
+            strokeCap="round"
           />
+          <View style={styles.progressTextContainer}>
+            <Text style={styles.waterConsumedText}>{waterConsumed}</Text>
+            <Text style={styles.waterGoalText}>/ {waterGoal} glasses</Text>
+          </View>
         </View>
-        <Text style={styles.progressText}>
-          {waterConsumed}ml / {waterGoal}ml
-        </Text>
-      </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => handleAddWater(250)}
-        >
-          <Text style={styles.buttonText}>+250ml</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => handleAddWater(500)}
-        >
-          <Text style={styles.buttonText}>+500ml</Text>
+        <TouchableOpacity onPress={handleAddWater} style={styles.button}>
+          <Ionicons name="add-outline" size={30} color="#00796B" />
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
+  container: {
+    borderRadius: 20,
     padding: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    marginVertical: 10,
+    shadowColor: '#00796B',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 10,
+    elevation: 5,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginLeft: 8,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#004D40',
+    marginLeft: 10,
+  },
+  tracker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  button: {
+    padding: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 50,
   },
   progressContainer: {
-    marginBottom: 16,
+    alignItems: 'center',
+    position: 'relative',
+    width: 120,
+    height: 120,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: "#E3F2FD",
-    borderRadius: 4,
-    overflow: "hidden",
-    marginBottom: 8,
+  progressTextContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#2196F3",
-    borderRadius: 4,
+  waterConsumedText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#00796B',
   },
-  progressText: {
+  waterGoalText: {
     fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  addButton: {
-    backgroundColor: "#2196F3",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    minWidth: 100,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
+    color: '#004D40',
   },
 });
-
-export default SimpleWaterTracker;

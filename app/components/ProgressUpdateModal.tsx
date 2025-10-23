@@ -1,18 +1,19 @@
-import { useMealContext } from "@/context/UnifiedMealContext";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
 import {
-  Alert,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
-} from "react-native";
+  Text,
+  StyleSheet,
+  Modal,
+  TextInput,
+  Alert,
+  ScrollView,
+  Platform,
+  TouchableOpacity,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useMealContext } from '@/context/UnifiedMealContext';
+import Button from './Button'; // Import the new Button component
 
 interface ProgressUpdateModalProps {
   visible: boolean;
@@ -26,28 +27,30 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
   const { getTodayMealPlan, updateCurrentProgress } = useMealContext();
   const todayPlan = getTodayMealPlan();
 
-  const [steps, setSteps] = useState("0");
-  const [workoutMinutes, setWorkoutMinutes] = useState("0");
-  const [calories, setCalories] = useState(
-    (todayPlan?.consumedCalories || 0).toString()
-  );
-  const [protein, setProtein] = useState(
-    (todayPlan?.consumedProtein || 0).toString()
-  );
+  const [steps, setSteps] = useState('0');
+  const [workoutMinutes, setWorkoutMinutes] = useState('0');
+  const [calories, setCalories] = useState('0');
+  const [protein, setProtein] = useState('0');
+
+  useEffect(() => {
+    if (visible && todayPlan) {
+      setCalories((todayPlan.consumedCalories || 0).toString());
+      setProtein((todayPlan.consumedProtein || 0).toString());
+    }
+  }, [visible, todayPlan]);
 
   const handleSave = () => {
     updateCurrentProgress(parseInt(calories) || 0, parseInt(protein) || 0);
-
-    Alert.alert("Success", "Progress updated successfully!");
+    Alert.alert('Success', 'Progress updated successfully!');
     onClose();
   };
 
   const handleReset = () => {
+    setSteps('0');
+    setWorkoutMinutes('0');
     if (todayPlan) {
-      setSteps("0");
-      setWorkoutMinutes("0");
-      setCalories(todayPlan.consumedCalories?.toString() || "0");
-      setProtein(todayPlan.consumedProtein?.toString() || "0");
+      setCalories((todayPlan.consumedCalories || 0).toString());
+      setProtein((todayPlan.consumedProtein || 0).toString());
     }
   };
 
@@ -59,9 +62,9 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
       transparent={false}
     >
       <View style={styles.container}>
-        <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
+        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#fff" />
+            <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.title}>Update Your Progress</Text>
@@ -80,22 +83,12 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
           </Text>
 
           <View style={styles.inputGroup}>
-            <View style={styles.inputHeader}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="walk" size={20} color="#45B7D1" />
-              </View>
-              <View style={styles.inputTitleContainer}>
-                <Text style={styles.inputLabel}>🚶‍♂️ Steps Today</Text>
-                <Text style={styles.inputHint}>
-                  How many steps did you take?
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.inputLabel}>🚶‍♂️ Steps Today</Text>
             <TextInput
               style={styles.input}
               value={steps}
               onChangeText={setSteps}
-              placeholder="e.g., 8500 steps"
+              placeholder="e.g., 8500"
               placeholderTextColor="#999"
               keyboardType="number-pad"
             />
@@ -103,20 +96,12 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
           </View>
 
           <View style={styles.inputGroup}>
-            <View style={styles.inputHeader}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="timer" size={20} color="#FF6B6B" />
-              </View>
-              <View style={styles.inputTitleContainer}>
-                <Text style={styles.inputLabel}>🏋️‍♂️ Workout Time</Text>
-                <Text style={styles.inputHint}>Minutes of exercise today</Text>
-              </View>
-            </View>
+            <Text style={styles.inputLabel}>🏋️‍♂️ Workout Time (minutes)</Text>
             <TextInput
               style={styles.input}
               value={workoutMinutes}
               onChangeText={setWorkoutMinutes}
-              placeholder="e.g., 30 minutes"
+              placeholder="e.g., 30"
               placeholderTextColor="#999"
               keyboardType="number-pad"
             />
@@ -124,20 +109,12 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
           </View>
 
           <View style={styles.inputGroup}>
-            <View style={styles.inputHeader}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="flame" size={20} color="#FF6B6B" />
-              </View>
-              <View style={styles.inputTitleContainer}>
-                <Text style={styles.inputLabel}>🔥 Calories Consumed</Text>
-                <Text style={styles.inputHint}>Total calories eaten today</Text>
-              </View>
-            </View>
+            <Text style={styles.inputLabel}>🔥 Calories Consumed</Text>
             <TextInput
               style={styles.input}
               value={calories}
               onChangeText={setCalories}
-              placeholder="e.g., 1800 calories"
+              placeholder="e.g., 1800"
               placeholderTextColor="#999"
               keyboardType="number-pad"
             />
@@ -145,37 +122,25 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
           </View>
 
           <View style={styles.inputGroup}>
-            <View style={styles.inputHeader}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="fitness" size={20} color="#4ECDC4" />
-              </View>
-              <View style={styles.inputTitleContainer}>
-                <Text style={styles.inputLabel}>💪 Protein Intake</Text>
-                <Text style={styles.inputHint}>Grams of protein consumed</Text>
-              </View>
-            </View>
+            <Text style={styles.inputLabel}>💪 Protein Intake (grams)</Text>
             <TextInput
               style={styles.input}
               value={protein}
               onChangeText={setProtein}
-              placeholder="e.g., 120 grams"
+              placeholder="e.g., 120"
               placeholderTextColor="#999"
               keyboardType="number-pad"
             />
             <Text style={styles.goalText}>Your daily goal: 120g protein</Text>
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <LinearGradient
-              colors={["#27ae60", "#2ecc71"]}
-              style={styles.saveButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.saveButtonText}>Save My Progress</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          <Button
+            title="Save My Progress"
+            onPress={handleSave}
+            variant="primary"
+            icon="checkmark-circle-outline"
+            style={{ marginTop: 20, marginBottom: 20 }}
+          />
 
           <View style={styles.encouragementBox}>
             <Text style={styles.encouragementText}>
@@ -192,151 +157,106 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: '#f8f9fa',
   },
   header: {
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
     paddingBottom: 25,
     paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerContent: {
-    alignItems: "center",
+    alignItems: 'center',
     flex: 1,
   },
   closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 30,
+    left: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   resetButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 30,
+    right: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 5,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: "#fff",
+    color: '#fff',
     opacity: 0.9,
-    textAlign: "center",
+    textAlign: 'center',
+    marginTop: 5,
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 25,
   },
   description: {
     fontSize: 16,
-    color: "#7f8c8d",
-    textAlign: "center",
+    color: '#666',
+    textAlign: 'center',
     marginBottom: 25,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   inputGroup: {
     marginBottom: 25,
   },
-  inputHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f8f9fa",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  inputTitleContainer: {
-    flex: 1,
-  },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: 2,
-  },
-  inputHint: {
-    fontSize: 12,
-    color: "#7f8c8d",
-    fontStyle: "italic",
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#444',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e9ecef",
-    borderRadius: 15,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#ddd',
+    borderRadius: 12,
     paddingHorizontal: 15,
-    paddingVertical: 15,
+    paddingVertical: 14,
     fontSize: 16,
-    color: "#2c3e50",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    color: '#333',
     marginBottom: 8,
   },
   goalText: {
     fontSize: 12,
-    color: "#27ae60",
-    fontWeight: "500",
-    fontStyle: "italic",
-  },
-  saveButton: {
-    borderRadius: 25,
-    overflow: "hidden",
-    marginTop: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  saveButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
+    color: '#667eea',
+    fontWeight: '500',
+    fontStyle: 'italic',
+    textAlign: 'right',
   },
   encouragementBox: {
-    backgroundColor: "#fff",
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
     borderRadius: 15,
     padding: 20,
     marginBottom: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
   },
   encouragementText: {
     fontSize: 14,
-    color: "#667eea",
-    textAlign: "center",
-    fontWeight: "500",
+    color: '#667eea',
+    textAlign: 'center',
+    fontWeight: '500',
     lineHeight: 20,
   },
 });
