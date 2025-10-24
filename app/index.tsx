@@ -110,7 +110,7 @@ export default function Index() {
         }}
       >
         <Button
-          Data={"Get Started → "}
+          title={"Get Started →"}
           onPress={() => router.push("/Sign/SignIn")}
         />
       </View>

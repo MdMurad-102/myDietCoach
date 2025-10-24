@@ -456,7 +456,16 @@ Make it practical, delicious, and nutritionally balanced. Include exact measurem
     <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backIcon}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/(tabs)/Home');
+            }
+          }}
+          style={styles.backIcon}
+        >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>AI Recipe Generator</Text>

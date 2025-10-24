@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { useMealContext } from '@/context/UnifiedMealContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Progress from 'react-native-progress';
-import { useMealContext } from '@/context/UnifiedMealContext';
 
 const DailyTasks = () => {
     const { currentDayPlan, toggleDailyTask } = useMealContext();
@@ -12,8 +12,9 @@ const DailyTasks = () => {
     const completedCount = tasks.filter(task => task.completed).length;
     const progress = tasks.length > 0 ? completedCount / tasks.length : 0;
 
-    const renderTaskItem = ({ item }: { item: { id: string; text: string; completed: boolean; icon?: keyof typeof Ionicons.glyphMap } }) => (
+    const renderTaskItem = (item: { id: string; text: string; completed: boolean; icon?: keyof typeof Ionicons.glyphMap }) => (
         <TouchableOpacity
+            key={item.id}
             style={styles.taskItem}
             onPress={() => toggleDailyTask(item.id)}
             activeOpacity={0.7}
@@ -56,19 +57,16 @@ const DailyTasks = () => {
                 />
             </View>
 
-            <FlatList
-                data={tasks}
-                renderItem={renderTaskItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.taskList}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={() => (
+            <View style={styles.taskList}>
+                {tasks.length > 0 ? (
+                    tasks.map(task => renderTaskItem(task))
+                ) : (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="file-tray-outline" size={40} color="#ccc" />
                         <Text style={styles.emptyText}>No tasks for today.</Text>
                     </View>
                 )}
-            />
+            </View>
         </LinearGradient>
     );
 };

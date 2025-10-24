@@ -139,6 +139,7 @@ export default function Index() {
     try {
       const PROMPT = JSON.stringify(data) + Prom.CALORIESANDPRO;
       console.log("Sending prompt to AI:", PROMPT);
+      console.log("API Key exists:", !!process.env.EXPO_PUBLIC_OPENROUTER_API_KEY);
 
       const AiCalculate = await calculateCalories(PROMPT);
       const AIResult = AiCalculate;
@@ -199,12 +200,18 @@ export default function Index() {
       console.log("AI Result:", removeJso);
 
       // Validate that we have the required fields
+      // Handle both 'protein' and 'proteins' field names
+      const calories = removeJso?.calories;
+      const proteins = removeJso?.proteins || removeJso?.protein;
+
       if (
         !removeJso ||
-        typeof removeJso.calories !== "number" ||
-        typeof removeJso.proteins !== "number"
+        typeof calories !== "number" ||
+        typeof proteins !== "number"
       ) {
         console.error("Invalid AI response structure:", removeJso);
+        console.error("Calories:", calories, "Type:", typeof calories);
+        console.error("Proteins:", proteins, "Type:", typeof proteins);
         Alert.alert(
           "Error",
           "AI response is missing required nutrition data. Please try again."
@@ -212,8 +219,6 @@ export default function Index() {
         setLoading(false);
         return;
       }
-
-      const { calories, proteins } = removeJso;
 
       if (!user?.id) {
         Alert.alert("User ID is missing. Make sure user is logged in.");

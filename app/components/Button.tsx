@@ -1,13 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
+  ActivityIndicator,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline' | 'icon';
 
@@ -98,12 +98,20 @@ const Button: React.FC<ButtonProps> = ({
         {loading ? (
           <ActivityIndicator color={variant === 'primary' ? '#fff' : '#333'} size="small" />
         ) : (
-          children || (
-            <View style={styles.content}>
-              {icon && <Ionicons name={icon} size={20} color={iconColor} style={styles.icon} />}
-              {title && <Text style={[styles.text, text]}>{title}</Text>}
-            </View>
-          )
+          <>
+            {children ? (
+              typeof children === 'string' ? (
+                <Text style={[styles.text, text]}>{children}</Text>
+              ) : (
+                children
+              )
+            ) : (
+              <View style={styles.content}>
+                {icon && <Ionicons name={icon} size={20} color={iconColor} style={styles.icon} />}
+                {title && <Text style={[styles.text, text]}>{title}</Text>}
+              </View>
+            )}
+          </>
         )}
       </LinearGradient>
     </TouchableOpacity>

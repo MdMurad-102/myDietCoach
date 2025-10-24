@@ -121,7 +121,16 @@ export default function BMICalculator() {
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity
+                    onPress={() => {
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.push('/(tabs)/Home');
+                        }
+                    }}
+                    style={styles.backButton}
+                >
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>BMI Analysis</Text>

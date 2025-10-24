@@ -44,17 +44,26 @@ export const generateRecipeFromText = async (prompt: string): Promise<string | n
 export const calculateCalories = async (prompt: string): Promise<string | null> => {
   if (!API_KEY) {
     console.error("❌ Cannot calculate calories: API key is missing");
+    console.error("Current API_KEY value:", API_KEY);
+    console.error("Environment variable EXPO_PUBLIC_OPENROUTER_API_KEY:", process.env.EXPO_PUBLIC_OPENROUTER_API_KEY);
     return null;
   }
+
+  console.log("✅ API Key is present, making request to OpenRouter");
 
   try {
     const result = await openai.chat.completions.create({
       model: "openai/gpt-4o",
       messages: [{ role: "user", content: prompt }],
     });
+    console.log("✅ AI Response received successfully");
     return result.choices[0].message.content;
   } catch (error) {
-    console.error("Error calculating calories:", error);
+    console.error("❌ Error calculating calories:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return null;
   }
 };

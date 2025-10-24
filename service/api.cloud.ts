@@ -449,119 +449,12 @@ export async function getProgressEntries(
 }
 
 // ============================================
-// MEAL MANAGEMENT FUNCTIONS
-// ============================================
-
-/**
- * Save a complete daily meal plan (breakfast, lunch, dinner, snacks)
- */
-export async function saveDailyMealPlan(userId: number, date: string, meals: {
-    breakfast?: any,
-    lunch?: any,
-    dinner?: any,
-    snacks?: any
-}): Promise<any> {
-    try {
-        const response = await api.post('/meals/daily-plan', {
-            userId,
-            date,
-            meals
-        });
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error saving daily meal plan:', error);
-        throw new Error('Failed to save daily meal plan');
-    }
-}
-
-/**
- * Add a single meal to a specific meal type
- */
-export async function addMealToDate(userId: number, date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks', meal: any): Promise<any> {
-    try {
-        const response = await api.post('/meals/add', {
-            userId,
-            date,
-            mealType,
-            meal
-        });
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error adding meal:', error);
-        throw new Error('Failed to add meal');
-    }
-}
-
-/**
- * Get meals for a specific date
- */
-export async function getMealsForDate(userId: number, date: string): Promise<any> {
-    try {
-        const response = await api.get(`/meals/date/${userId}/${date}`);
-        return response.data as any;
-    } catch (error) {
-        console.error('Error getting meals for date:', error);
-        throw new Error('Failed to get meals');
-    }
-}
-
-/**
- * Get meals for a date range
- */
-export async function getMealsForRange(userId: number, startDate: string, endDate: string): Promise<any[]> {
-    try {
-        const response = await api.get(`/meals/range/${userId}`, {
-            params: { startDate, endDate }
-        });
-        return (response.data as any).plans;
-    } catch (error) {
-        console.error('Error getting meal range:', error);
-        throw new Error('Failed to get meal range');
-    }
-}
-
-/**
- * Mark a meal as consumed
- */
-export async function markMealConsumed(userId: number, date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'): Promise<any> {
-    try {
-        const response = await api.post('/meals/consume', {
-            userId,
-            date,
-            mealType
-        });
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error marking meal consumed:', error);
-        throw new Error('Failed to mark meal consumed');
-    }
-}
-
-/**
- * Delete a meal from a specific meal type
- */
-export async function deleteMealFromDate(userId: number, date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'): Promise<any> {
-    try {
-        const response = await api.delete(`/meals/${userId}/${date}/${mealType}`);
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error deleting meal:', error);
-        throw new Error('Failed to delete meal');
-    }
-}
-
-// ============================================
-// LEGACY/STUB FUNCTIONS (For backward compatibility)
+// STUB FUNCTIONS (Not yet implemented)
 // ============================================
 
 export async function getUserRecipes(userId: number): Promise<Recipe[]> {
-    try {
-        const response = await api.get(`/recipes/custom/${userId}`);
-        return (response.data as any).recipes || [];
-    } catch (error) {
-        console.error('Error getting user recipes:', error);
-        return [];
-    }
+    console.warn('getUserRecipes: Not yet implemented on backend');
+    return [];
 }
 
 export async function createRecipe(userId: number, recipe: any): Promise<Recipe> {
@@ -570,294 +463,32 @@ export async function createRecipe(userId: number, recipe: any): Promise<Recipe>
 }
 
 export async function getUserMealPlans(userId: number): Promise<any[]> {
-    const today = new Date();
-    const startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const endDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Include next 14 days
-    return await getMealsForRange(userId, startDate, endDate);
+    console.warn('getUserMealPlans: Not yet implemented on backend');
+    return [];
 }
 
 export async function createMealPlan(userId: number, plan: any): Promise<any> {
-    const date = plan.date || new Date().toISOString().split('T')[0];
-    return await saveDailyMealPlan(userId, date, plan.meals);
+    console.warn('createMealPlan: Not yet implemented on backend');
+    return { id: 1, userId, ...plan };
 }
 
-export async function getTodayMealPlan(userId: number): Promise<any> {
-    const today = new Date().toISOString().split('T')[0];
-    return await getMealsForDate(userId, today);
+export async function getTodayMealPlan(userId: number): Promise<any[]> {
+    console.warn('getTodayMealPlan: Not yet implemented on backend');
+    return [];
 }
 
 export async function updateMealInPlan(mealId: number, data: any): Promise<void> {
-    console.warn('updateMealInPlan: Use addMealToDate instead');
+    console.warn('updateMealInPlan: Not yet implemented on backend');
 }
 
 export async function scheduleMeal(userId: number, mealData: any): Promise<any> {
-    const date = mealData.date || new Date().toISOString().split('T')[0];
-    const mealType = mealData.mealType || 'snacks';
-    return await addMealToDate(userId, date, mealType, mealData);
+    console.warn('scheduleMeal: Not yet implemented on backend');
+    return { id: 1, userId, ...mealData };
 }
 
 export async function dumpUsers() {
     console.warn('dumpUsers: Not available with backend API');
     return [];
-}
-
-// ============================================
-// DAILY NUTRITION FUNCTIONS
-// ============================================
-
-/**
- * Track daily nutrition
- */
-export async function trackDailyNutrition(
-    userId: number,
-    date: string,
-    calories: number,
-    protein: number,
-    carbs?: number,
-    fat?: number,
-    fiber?: number,
-    sugar?: number,
-    sodium?: number
-): Promise<any> {
-    try {
-        const response = await api.post('/nutrition/track', {
-            userId,
-            date,
-            calories,
-            protein,
-            carbs,
-            fat,
-            fiber,
-            sugar,
-            sodium
-        });
-        return (response.data as any).nutrition;
-    } catch (error) {
-        console.error('Error tracking nutrition:', error);
-        throw new Error('Failed to track nutrition');
-    }
-}
-
-/**
- * Get daily nutrition for a specific date
- */
-export async function getDailyNutrition(userId: number, date: string): Promise<any> {
-    try {
-        const response = await api.get(`/nutrition/${userId}/${date}`);
-        return (response.data as any).nutrition;
-    } catch (error) {
-        console.error('Error getting nutrition:', error);
-        throw new Error('Failed to get nutrition');
-    }
-}
-
-/**
- * Get nutrition for date range
- */
-export async function getNutritionRange(
-    userId: number,
-    startDate: string,
-    endDate: string
-): Promise<any[]> {
-    try {
-        const response = await api.get(`/nutrition/range/${userId}`, {
-            params: { startDate, endDate }
-        });
-        return (response.data as any).nutrition;
-    } catch (error) {
-        console.error('Error getting nutrition range:', error);
-        throw new Error('Failed to get nutrition range');
-    }
-}
-
-// ============================================
-// DAILY TASKS FUNCTIONS
-// ============================================
-
-/**
- * Update or create a daily task
- */
-export async function updateDailyTask(
-    userId: number,
-    date: string,
-    taskId: string,
-    completed: boolean,
-    currentValue?: number
-): Promise<any> {
-    try {
-        const response = await api.post('/tasks/update', {
-            userId,
-            date,
-            taskId,
-            completed,
-            currentValue
-        });
-        return (response.data as any).task;
-    } catch (error) {
-        console.error('Error updating task:', error);
-        throw new Error('Failed to update task');
-    }
-}
-
-/**
- * Get daily tasks for a specific date
- */
-export async function getDailyTasks(userId: number, date: string): Promise<any[]> {
-    try {
-        const response = await api.get(`/tasks/${userId}/${date}`);
-        return (response.data as any).tasks;
-    } catch (error) {
-        console.error('Error getting tasks:', error);
-        throw new Error('Failed to get tasks');
-    }
-}
-
-/**
- * Toggle task completion
- */
-export async function toggleTaskCompletion(
-    userId: number,
-    date: string,
-    taskId: string
-): Promise<any> {
-    try {
-        const response = await api.put('/tasks/toggle', {
-            userId,
-            date,
-            taskId
-        });
-        return (response.data as any).task;
-    } catch (error) {
-        console.error('Error toggling task:', error);
-        throw new Error('Failed to toggle task');
-    }
-}
-
-// ============================================
-// WEIGHT GOALS FUNCTIONS
-// ============================================
-
-/**
- * Create weight goal
- */
-export async function createWeightGoal(
-    userId: number,
-    currentWeight: number,
-    targetWeight: number,
-    startWeight: number,
-    goalDate: string,
-    weeklyGoal: number
-): Promise<any> {
-    try {
-        const response = await api.post('/goals/weight', {
-            userId,
-            currentWeight,
-            targetWeight,
-            startWeight,
-            goalDate,
-            weeklyGoal
-        });
-        return (response.data as any).goal;
-    } catch (error) {
-        console.error('Error creating weight goal:', error);
-        throw new Error('Failed to create weight goal');
-    }
-}
-
-/**
- * Get active weight goal
- */
-export async function getActiveWeightGoal(userId: number): Promise<any> {
-    try {
-        const response = await api.get(`/goals/weight/${userId}`);
-        return (response.data as any).goal;
-    } catch (error) {
-        console.error('Error getting weight goal:', error);
-        throw new Error('Failed to get weight goal');
-    }
-}
-
-/**
- * Update weight goal progress
- */
-export async function updateWeightGoalProgress(
-    goalId: number,
-    currentWeight: number
-): Promise<any> {
-    try {
-        const response = await api.put(`/goals/weight/${goalId}`, {
-            currentWeight
-        });
-        return (response.data as any).goal;
-    } catch (error) {
-        console.error('Error updating weight goal:', error);
-        throw new Error('Failed to update weight goal');
-    }
-}
-
-// ============================================
-// DAILY MEAL PLANS FUNCTIONS
-// ============================================
-
-/**
- * Create or update daily meal plan
- */
-export async function saveDailyMealPlanV2(
-    userId: number,
-    date: string,
-    mealPlanData: any,
-    planName: string,
-    autoGenerated: boolean = false
-): Promise<any> {
-    try {
-        const response = await api.post('/daily-meal-plan', {
-            userId,
-            date,
-            mealPlanData,
-            planName,
-            autoGenerated
-        });
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error saving daily meal plan:', error);
-        throw new Error('Failed to save daily meal plan');
-    }
-}
-
-/**
- * Get daily meal plan
- */
-export async function getDailyMealPlanV2(userId: number, date: string): Promise<any> {
-    try {
-        const response = await api.get(`/daily-meal-plan/${userId}/${date}`);
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error getting daily meal plan:', error);
-        throw new Error('Failed to get daily meal plan');
-    }
-}
-
-/**
- * Mark meal as consumed in daily plan
- */
-export async function markMealConsumedInDailyPlan(
-    userId: number,
-    date: string,
-    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks',
-    consumed: boolean
-): Promise<any> {
-    try {
-        const response = await api.put('/daily-meal-plan/consume', {
-            userId,
-            date,
-            mealType,
-            consumed
-        });
-        return (response.data as any).plan;
-    } catch (error) {
-        console.error('Error marking meal consumed:', error);
-        throw new Error('Failed to mark meal consumed');
-    }
 }
 
 // ============================================

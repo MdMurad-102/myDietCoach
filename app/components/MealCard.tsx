@@ -33,7 +33,10 @@ const MealCard: React.FC<MealCardProps> = ({ meal, onPress, onSchedule, onSave, 
                 <View style={styles.header}>
                     <Text style={styles.emoji}>{getMealEmoji(meal.mealType)}</Text>
                     <View style={styles.titleContainer}>
-                        <Text style={styles.name} numberOfLines={2}>{meal.recipeName}</Text>
+                        <Text style={styles.name} numberOfLines={2}>{meal.recipeName || meal.name}</Text>
+                        {meal.nameBn && (
+                            <Text style={styles.nameBangla} numberOfLines={1}>{meal.nameBn}</Text>
+                        )}
                         <Text style={styles.type}>{meal.mealType || 'Meal'}</Text>
                     </View>
                     {meal.mealType && (
@@ -105,6 +108,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 2,
+    },
+    nameBangla: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#666',
+        marginBottom: 4,
+        fontStyle: 'italic',
     },
     type: {
         fontSize: 14,

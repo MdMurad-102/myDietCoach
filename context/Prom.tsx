@@ -1,6 +1,6 @@
 // AI Prompts for the application
 const Prom = {
-    CALORIESANDPRO: `
+  CALORIESANDPRO: `
 
 Based on the user's profile data provided above, calculate their daily calorie and protein needs.
 
@@ -13,8 +13,10 @@ Consider:
 Return a JSON object with:
 {
   "calories": <number>,
-  "protein": <number in grams>
+  "proteins": <number in grams>
 }
+
+IMPORTANT: Use "proteins" (plural) not "protein" for the field name.
 
 Use standard formulas:
 - BMR (Basal Metabolic Rate)

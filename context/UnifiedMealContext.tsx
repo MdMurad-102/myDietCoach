@@ -7,28 +7,22 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { Platform } from "react-native";
 import {
   getUserMealPlans,
   getUserRecipes,
-  saveCustomRecipe
+  saveCustomRecipe,
+  getMealsForDate,
+  saveDailyMealPlan,
+  addMealToDate,
+  markMealConsumed as markMealConsumedAPI,
 } from "../service/api";
 import { UserContext } from "./UserContext";
-
-// Only import database on native platforms
-let getTodayMealPlanFromDb: any, updateMealInPlan: any, scheduleMealInDb: any, updateWaterIntakeInDb: any;
-if (Platform.OS !== 'web') {
-  const recipes = require("../database/recipes");
-  getTodayMealPlanFromDb = recipes.getTodayMealPlan;
-  updateMealInPlan = recipes.updateMealInPlan;
-  scheduleMealInDb = recipes.scheduleMeal;
-  updateWaterIntakeInDb = recipes.updateWaterIntakeInDb;
-}
 
 export interface MealItem {
   id: string;
   recipeName: string;
-  name?: string; // Add name property
+  name?: string; // English name (or general name)
+  nameBn?: string; // Bangla name
   calories: number;
   protein: number;
   carbs?: number;
@@ -40,7 +34,7 @@ export interface MealItem {
   consumed?: boolean;
   mealType?: string;
   scheduledDate?: string;
-  date?: string; // Add date property
+  date?: string; // Date the meal is scheduled for
   nutritionTips?: string;
   prepTime?: string;
   difficulty?: string;
@@ -89,6 +83,15 @@ export interface MealContextType {
     mealType: string
   ) => Promise<void>;
   saveMeal: (meal: MealItem) => Promise<void>;
+  saveFullDailyPlan: (
+    date: string,
+    meals: {
+      breakfast?: MealItem;
+      lunch?: MealItem;
+      dinner?: MealItem;
+      snacks?: MealItem;
+    }
+  ) => Promise<void>;
   addGeneratedMeal: (meal: MealItem) => void;
   updateMealPlan: (date: string, plan: Partial<DailyMealPlan>) => void;
   markMealConsumed: (mealId: string, consumed: boolean) => void;
@@ -135,80 +138,119 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      // Load recipes
-      if (Platform.OS !== 'web') {
-        const recipes = await getUserRecipes(user.id);
-        setSavedMeals(
-          recipes.map((recipe: any) => ({
-            id: recipe.id.toString(),
-            recipeName: recipe.recipe_name,
-            calories: recipe.json_data?.calories || 0,
-            protein: recipe.json_data?.protein || 0,
-            ingredients: recipe.json_data?.ingredients || [],
-            instructions: recipe.json_data?.instructions || [],
-            cookingTime: recipe.json_data?.cookingTime || "30 min",
-            servings: recipe.json_data?.servings || 1,
-          }))
-        );
-      } else {
-        setSavedMeals([]);
-      }
+      // No more custom recipes - using scheduled_meals only
+      console.log('ℹ️ Using scheduled_meals as single source for all meals');
+      setSavedMeals([]);
 
-      // Load meal plans
-      if (Platform.OS !== 'web') {
-        const plans = await getUserMealPlans(user.id);
-        const plansMap: Record<string, DailyMealPlan> = {};
+      // Load meal plans from scheduled_meals table
+      console.log('🔄 Loading meal plans for user:', user.id);
+      const plans = await getUserMealPlans(user.id);
+      console.log('✅ Loaded meal plans:', plans.length);
+      const plansMap: Record<string, DailyMealPlan> = {};
 
-        plans.forEach((plan: any) => {
-          const planDate = plan.created_at ? new Date(plan.created_at).toISOString().split("T")[0] : todayString;
-          plansMap[planDate] = {
-            id: plan.id.toString(),
-            date: planDate,
-            meals: plan.meal_plan_data?.meals || [],
-            waterGlasses: 0,
-            tasks: [],
-            goals: {
-              calories: user?.calories || 2000,
-              protein: user?.proteins || 150,
-              water: user?.daily_water_goal || 8,
-            },
-            totalCalories: plan.total_calories || 0,
-            totalProtein: plan.total_protein || 0,
-            consumedCalories: 0,
-            consumedProtein: 0,
-          };
+      plans.forEach((plan: any) => {
+        const planDate = plan.scheduled_date || plan.created_at
+          ? new Date(plan.scheduled_date || plan.created_at).toISOString().split("T")[0]
+          : todayString;
+
+        const mealPlanData = plan.meal_plan_data || {};
+        const allMeals: MealItem[] = [];
+
+        // Combine all meal types into one meals array
+        // Handle both 'snack' and 'snacks' for backwards compatibility
+        ['breakfast', 'lunch', 'dinner', 'snacks', 'snack'].forEach((mealType) => {
+          const meal = mealPlanData[mealType];
+          if (meal && !allMeals.some(m => m.id === meal.id)) {  // Avoid duplicates
+            const normalizedMealType = mealType === 'snack' ? 'snacks' : mealType;
+            allMeals.push({
+              ...meal,
+              id: meal.id || `${normalizedMealType}-${Date.now()}`,
+              recipeName: meal.recipeName || meal.name || 'Unnamed Meal',
+              name: meal.recipeName || meal.name,
+              mealType: normalizedMealType,
+              consumed: meal.consumed || false,
+              calories: meal.calories || 0,
+              protein: meal.protein || 0,
+              carbs: meal.carbs,
+              fat: meal.fat,
+            });
+          }
         });
-        setDailyMealPlans(plansMap);
-      } else {
-        setDailyMealPlans({});
-      }
 
-      // Load today's meal plan from local DB
-      if (Platform.OS !== 'web' && getTodayMealPlanFromDb) {
-        const todayPlan = await getTodayMealPlanFromDb(user.id, todayString);
-        if (todayPlan) {
-          const plan: DailyMealPlan = {
-            id: todayPlan.id.toString(),
-            date: todayPlan.scheduled_date,
-            meals: todayPlan.meal_plan_data?.meals || [],
-            waterGlasses: todayPlan.meal_plan_data?.waterGlasses || 0,
-            tasks: [],
+        plansMap[planDate] = {
+          id: plan.id?.toString() || planDate,
+          date: planDate,
+          meals: allMeals,
+          waterGlasses: mealPlanData.waterGlasses || 0,
+          tasks: mealPlanData.tasks || [],
+          goals: {
+            calories: user?.calories || 2000,
+            protein: user?.proteins || 150,
+            water: user?.daily_water_goal || 8,
+          },
+          totalCalories: plan.total_calories || 0,
+          totalProtein: plan.total_protein || 0,
+          consumedCalories: plan.calories_consumed || 0,
+          consumedProtein: plan.protein_consumed || 0,
+        };
+      });
+
+      console.log('📊 Loaded plans map:', Object.keys(plansMap).length, 'dates');
+      setDailyMealPlans(plansMap);
+
+      // Load today's meal plan specifically
+      try {
+        const todayData = await getMealsForDate(user.id, todayString);
+        console.log('📅 Today\'s meal data:', todayData);
+
+        if (todayData && todayData.meals) {
+          const mealPlanData = todayData.meals;
+          const allMeals: MealItem[] = [];
+
+          // Handle both 'snack' and 'snacks' for backwards compatibility
+          ['breakfast', 'lunch', 'dinner', 'snacks', 'snack'].forEach((mealType) => {
+            const meal = mealPlanData[mealType];
+            if (meal && !allMeals.some(m => m.id === meal.id)) {  // Avoid duplicates
+              const normalizedMealType = mealType === 'snack' ? 'snacks' : mealType;
+              allMeals.push({
+                ...meal,
+                id: meal.id || `${normalizedMealType}-${Date.now()}`,
+                recipeName: meal.recipeName || meal.name || 'Unnamed Meal',
+                name: meal.recipeName || meal.name,
+                mealType: normalizedMealType,
+                consumed: meal.consumed || false,
+                calories: meal.calories || 0,
+                protein: meal.protein || 0,
+                carbs: meal.carbs,
+                fat: meal.fat,
+              });
+            }
+          });
+
+          const todayPlan: DailyMealPlan = {
+            id: todayData.id?.toString() || todayString,
+            date: todayString,
+            meals: allMeals,
+            waterGlasses: mealPlanData.waterGlasses || 0,
+            tasks: mealPlanData.tasks || [],
             goals: {
               calories: user?.calories || 2000,
               protein: user?.proteins || 150,
               water: user?.daily_water_goal || 8,
             },
-            totalCalories: todayPlan.total_calories || 0,
-            totalProtein: todayPlan.total_protein || 0,
-            consumedCalories: todayPlan.calories_consumed || 0,
-            consumedProtein: todayPlan.protein_consumed || 0,
+            totalCalories: todayData.totalCalories || 0,
+            totalProtein: todayData.totalProtein || 0,
+            consumedCalories: todayData.caloriesConsumed || 0,
+            consumedProtein: todayData.proteinConsumed || 0,
           };
 
           setDailyMealPlans(prev => ({
             ...prev,
-            [todayString]: plan
+            [todayString]: todayPlan
           }));
         }
+      } catch (todayError) {
+        console.log('ℹ️ No meals for today yet:', todayError);
       }
     } catch (e) {
       console.error('Failed to load data:', e);
@@ -231,43 +273,32 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   };
 
   const addMealToToday = async (meal: Partial<MealItem>): Promise<void> => {
-    if (!user?.id || Platform.OS === 'web' || !scheduleMealInDb || !getTodayMealPlanFromDb || !updateMealInPlan) {
-      throw new Error("User not logged in or DB not available");
+    if (!user?.id) {
+      throw new Error("User not logged in");
     }
 
     try {
       setIsLoading(true);
       setError(null);
 
+      const mealType = (meal.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks') || 'snacks';
       const mealData = {
-        recipeName: meal.recipeName || "Custom Meal",
+        id: `${mealType}-${Date.now()}`,
+        recipeName: meal.recipeName || meal.name || "Custom Meal",
+        name: meal.name || meal.recipeName || "Custom Meal",
         calories: meal.calories || 0,
         protein: meal.protein || 0,
-        ...meal
+        carbs: meal.carbs,
+        fat: meal.fat,
+        ingredients: meal.ingredients,
+        instructions: meal.instructions,
+        cookingTime: meal.cookingTime,
+        servings: meal.servings,
+        consumed: false,
+        mealType,
       };
 
-      let todayPlan = await getTodayMealPlanFromDb(user.id, todayString);
-
-      if (!todayPlan) {
-        await scheduleMealInDb(
-          user.id,
-          todayString,
-          mealData.mealType,
-          mealData.calories,
-          mealData.protein,
-          undefined,
-          undefined,
-          { meals: [mealData] }
-        );
-      } else {
-        const currentMeals = todayPlan.meal_plan_data?.meals || [];
-        const updatedMealPlanData = {
-          ...todayPlan.meal_plan_data,
-          meals: [...currentMeals, mealData]
-        };
-        await updateMealInPlan(todayPlan.id, updatedMealPlanData);
-      }
-
+      await addMealToDate(user.id, todayString, mealType, mealData);
       await loadData();
       console.log("✅ Meal added to today successfully:", mealData.recipeName);
     } catch (error) {
@@ -284,20 +315,12 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     date: string,
     mealType: string
   ): Promise<void> => {
-    if (!user?.id || Platform.OS === 'web' || !scheduleMealInDb) return;
+    if (!user?.id) return;
 
     try {
       setIsLoading(true);
-      await scheduleMealInDb(
-        user.id,
-        date,
-        mealType,
-        meal.calories,
-        meal.protein,
-        undefined,
-        undefined,
-        { meals: [meal] }
-      );
+      const mealTypeFormatted = mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+      await addMealToDate(user.id, date, mealTypeFormatted, meal);
       await loadData();
       console.log("✅ Meal scheduled successfully");
     } catch (error) {
@@ -308,8 +331,36 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     }
   };
 
+  const saveFullDailyPlan = async (
+    date: string,
+    meals: {
+      breakfast?: MealItem;
+      lunch?: MealItem;
+      dinner?: MealItem;
+      snacks?: MealItem;
+    }
+  ): Promise<void> => {
+    if (!user?.id) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log("💾 Saving full daily meal plan for:", date);
+      await saveDailyMealPlan(user.id, date, meals);
+      await loadData();
+      console.log("✅ Full daily plan saved successfully");
+    } catch (error) {
+      console.error("❌ Error saving full daily plan:", error);
+      setError("Failed to save daily meal plan");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const saveMeal = async (meal: MealItem): Promise<void> => {
-    if (!user?.id || Platform.OS === 'web') return;
+    if (!user?.id) return;
 
     try {
       setIsLoading(true);
@@ -351,19 +402,9 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       ...meal,
     };
 
-    if (Platform.OS !== 'web' && scheduleMealInDb) {
-      await scheduleMealInDb(
-        user.id,
-        meal.date,
-        meal.mealType || 'snack',
-        newMeal.calories,
-        newMeal.protein,
-        undefined,
-        undefined,
-        { meals: [newMeal] }
-      );
-      await loadData(); // Refresh data
-    }
+    const mealType = (meal.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks') || 'snacks';
+    await addMealToDate(user.id, meal.date, mealType, newMeal);
+    await loadData(); // Refresh data
   };
 
   const updateMealPlan = (date: string, plan: Partial<DailyMealPlan>) => {
@@ -389,19 +430,33 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   };
 
   const updateWaterIntake = async (glasses: number) => {
-    if (!user?.id || Platform.OS === 'web' || !updateWaterIntakeInDb) return;
+    if (!user?.id) return;
 
     const today = getTodayMealPlan();
     if (today) {
       try {
         setIsLoading(true);
-        await updateWaterIntakeInDb(user.id, todayString, glasses);
+
+        // Get current meal plan data
+        const todayData = await getMealsForDate(user.id, todayString);
+        const mealPlanData = todayData?.meal_plan_data || {};
+
+        // Update water intake in the meal plan data
+        const updatedMealPlanData = {
+          ...mealPlanData,
+          waterGlasses: glasses
+        };
+
+        // Save the updated plan
+        await saveDailyMealPlan(user.id, todayString, updatedMealPlanData);
+
         // Optimistically update the UI
         updateMealPlan(todayString, { waterGlasses: glasses });
+
         // Refresh data from the source to ensure consistency
         await loadData();
       } catch (error) {
-        console.error("❌ Error updating water intake in DB:", error);
+        console.error("❌ Error updating water intake:", error);
         setError("Failed to update water intake.");
       } finally {
         setIsLoading(false);
@@ -443,6 +498,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     refreshMealData: loadData,
     addMealToToday,
     scheduleMeal,
+    saveFullDailyPlan,
     saveMeal,
     addGeneratedMeal,
     updateMealPlan,

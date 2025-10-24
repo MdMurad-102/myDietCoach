@@ -21,6 +21,7 @@ export default function DailyMealPlanGenerator() {
     const [mealPlan, setMealPlan] = useState<DailyMealPlan | null>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [options, setOptions] = useState<MealPlanOptions>({
         targetCalories: 2000,
         vegetarianOnly: false,
@@ -29,9 +30,22 @@ export default function DailyMealPlanGenerator() {
         quickMeals: false,
     });
 
-    const { scheduleMeal, refreshMealData } = useMealContext();
+    const { scheduleMeal, saveFullDailyPlan, refreshMealData } = useMealContext();
     const userContext = useContext(UserContext);
     const user = userContext?.user;
+
+    // Get date options (today, tomorrow, day after tomorrow)
+    const getDateOptions = () => {
+        const dates = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            dates.push({ date: dateStr, label });
+        }
+        return dates;
+    };
 
     // Generate initial meal plan
     const handleGeneratePlan = () => {
@@ -75,44 +89,77 @@ export default function DailyMealPlanGenerator() {
         setSaving(true);
 
         try {
-            const today = new Date().toISOString().split('T')[0];
+            // Use selected date instead of always today
+            const dateLabel = getDateOptions().find(d => d.date === selectedDate)?.label || selectedDate;
 
-            // Save each meal with its type
-            const meals = [
-                { meal: mealPlan.breakfast, type: 'breakfast' },
-                { meal: mealPlan.lunch, type: 'lunch' },
-                { meal: mealPlan.dinner, type: 'dinner' },
-                { meal: mealPlan.snack, type: 'snack' },
-            ];
+            // Prepare meals in the format expected by saveFullDailyPlan
+            const mealsToSave = {
+                breakfast: {
+                    id: mealPlan.breakfast.id,
+                    recipeName: mealPlan.breakfast.nameEn,
+                    name: mealPlan.breakfast.nameEn,
+                    nameBn: mealPlan.breakfast.name, // Bangla name
+                    calories: mealPlan.breakfast.calories,
+                    protein: mealPlan.breakfast.protein,
+                    carbs: mealPlan.breakfast.carbs,
+                    fat: mealPlan.breakfast.fat,
+                    ingredients: mealPlan.breakfast.ingredients,
+                    prepTime: mealPlan.breakfast.prepTime,
+                    servings: mealPlan.breakfast.servings,
+                },
+                lunch: {
+                    id: mealPlan.lunch.id,
+                    recipeName: mealPlan.lunch.nameEn,
+                    name: mealPlan.lunch.nameEn,
+                    nameBn: mealPlan.lunch.name,
+                    calories: mealPlan.lunch.calories,
+                    protein: mealPlan.lunch.protein,
+                    carbs: mealPlan.lunch.carbs,
+                    fat: mealPlan.lunch.fat,
+                    ingredients: mealPlan.lunch.ingredients,
+                    prepTime: mealPlan.lunch.prepTime,
+                    servings: mealPlan.lunch.servings,
+                },
+                dinner: {
+                    id: mealPlan.dinner.id,
+                    recipeName: mealPlan.dinner.nameEn,
+                    name: mealPlan.dinner.nameEn,
+                    nameBn: mealPlan.dinner.name,
+                    calories: mealPlan.dinner.calories,
+                    protein: mealPlan.dinner.protein,
+                    carbs: mealPlan.dinner.carbs,
+                    fat: mealPlan.dinner.fat,
+                    ingredients: mealPlan.dinner.ingredients,
+                    prepTime: mealPlan.dinner.prepTime,
+                    servings: mealPlan.dinner.servings,
+                },
+                snacks: {
+                    id: mealPlan.snack.id,
+                    recipeName: mealPlan.snack.nameEn,
+                    name: mealPlan.snack.nameEn,
+                    nameBn: mealPlan.snack.name,
+                    calories: mealPlan.snack.calories,
+                    protein: mealPlan.snack.protein,
+                    carbs: mealPlan.snack.carbs,
+                    fat: mealPlan.snack.fat,
+                    ingredients: mealPlan.snack.ingredients,
+                    prepTime: mealPlan.snack.prepTime,
+                    servings: mealPlan.snack.servings,
+                },
+            };
 
-            // Save all meals
-            for (const { meal, type } of meals) {
-                await scheduleMeal(
-                    {
-                        id: meal.id,
-                        recipeName: meal.nameEn,
-                        calories: meal.calories,
-                        protein: meal.protein,
-                        carbs: meal.carbs,
-                        fat: meal.fat,
-                        ingredients: meal.ingredients,
-                        prepTime: meal.prepTime,
-                        servings: meal.servings,
-                    },
-                    today,
-                    type as 'breakfast' | 'lunch' | 'dinner' | 'snack'
-                );
-            }
+            // Save complete daily plan to selected date
+            await saveFullDailyPlan(selectedDate, mealsToSave);
 
             // Refresh meal data
             await refreshMealData();
 
             setSaving(false);
 
-            // Show success message
+            // Show success message with date
             Alert.alert(
                 '✅ Meal Plan Saved!',
-                'Your complete daily meal plan has been saved successfully.',
+                `Your complete daily meal plan has been saved for ${dateLabel}.`,
                 [
                     {
                         text: 'View on Home',
@@ -151,11 +198,42 @@ export default function DailyMealPlanGenerator() {
         <ScrollView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity
+                    onPress={() => {
+                        router.push('/(tabs)/Meals');
+                    }}
+                    style={styles.backButton}
+                >
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.title}>Daily Meal Plan</Text>
                 <View style={styles.placeholder} />
+            </View>
+
+            {/* Date Selector */}
+            <View style={styles.dateSection}>
+                <Text style={styles.sectionTitle}>Select Date</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+                    {getDateOptions().map((dateOption) => (
+                        <TouchableOpacity
+                            key={dateOption.date}
+                            style={[
+                                styles.dateButton,
+                                selectedDate === dateOption.date && styles.dateButtonActive,
+                            ]}
+                            onPress={() => setSelectedDate(dateOption.date)}
+                        >
+                            <Text
+                                style={[
+                                    styles.dateButtonText,
+                                    selectedDate === dateOption.date && styles.dateButtonTextActive,
+                                ]}
+                            >
+                                {dateOption.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
             </View>
 
             {/* Options Section */}
@@ -396,6 +474,37 @@ const styles = StyleSheet.create({
     },
     placeholder: {
         width: 40,
+    },
+    dateSection: {
+        backgroundColor: '#fff',
+        marginHorizontal: 16,
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 12,
+    },
+    dateScroll: {
+        marginTop: 8,
+    },
+    dateButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#E0E0E0',
+        marginRight: 10,
+        backgroundColor: '#fff',
+    },
+    dateButtonActive: {
+        borderColor: '#667eea',
+        backgroundColor: '#F0F3FF',
+    },
+    dateButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+    },
+    dateButtonTextActive: {
+        color: '#667eea',
     },
     optionsSection: {
         backgroundColor: '#fff',
