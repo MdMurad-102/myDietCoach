@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import Button from "../components/Button";
+import MealTimeSettings from "../components/MealTimeSettings";
 import ProfileHeader from "../components/ProfileHeader";
 
 export default function Profile() {
@@ -125,6 +126,10 @@ export default function Profile() {
             color="#e91e63"
           />
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <MealTimeSettings />
       </View>
 
       <View style={styles.section}>

@@ -7,7 +7,7 @@ import axios from 'axios';
 // Backend API URL - update this with your server URL
 // Using your computer's IP address so mobile app can connect
 const API_URL = __DEV__
-    ? 'http://192.168.1.110:3000/api'  // Development (your computer IP)
+    ? 'http://192.168.1.100:3000/api'  // Development (your computer IP)
     : 'https://your-backend-url.com/api'; // Production (deployed server)
 
 // Create axios instance with default config

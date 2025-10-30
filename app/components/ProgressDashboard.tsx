@@ -1,25 +1,27 @@
-import React, { useState, useContext } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  Platform,
-} from "react-native";
+import { UserContext } from "@/context/UserContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { UserContext } from "@/context/UserContext";
-import ProgressChart from "./ProgressChart";
-import GoalSettingModal from "./GoalSettingModal";
-import ProgressUpdateModal from "./ProgressUpdateModal";
+import { useRouter } from "expo-router";
+import React, { useContext, useState } from "react";
+import {
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Button from "./Button";
+import GoalSettingModal from "./GoalSettingModal";
+import ProgressChart from "./ProgressChart";
+import ProgressUpdateModal from "./ProgressUpdateModal";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 export default function ProgressDashboard() {
   const context = useContext(UserContext);
+  const router = useRouter();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("This Month");
@@ -69,8 +71,13 @@ export default function ProgressDashboard() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
-        <Text style={styles.title}>Your Progress</Text>
-        <Text style={styles.subtitle}>A visual journey of your success</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Your Progress</Text>
+          <Text style={styles.subtitle}>A visual journey of your success</Text>
+        </View>
       </LinearGradient>
 
       <View style={styles.mainContent}>
@@ -175,6 +182,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   title: {
     fontSize: 32,

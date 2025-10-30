@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -453,54 +454,60 @@ Make it practical, delicious, and nutritionally balanced. Include exact measurem
   };
 
   return (
-    <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.push('/(tabs)/Home');
-            }
-          }}
-          style={styles.backIcon}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Recipe Generator</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      {/* Progress Indicator */}
-      {step < 3 && (
-        <View style={styles.progressContainer}>
-          {[1, 2].map((s) => (
-            <View key={s} style={styles.progressStep}>
-              <View style={[styles.progressDot, step >= s && styles.progressDotActive]}>
-                {step > s ? (
-                  <Ionicons name="checkmark" size={12} color="white" />
-                ) : (
-                  <Text style={styles.progressDotText}>{s}</Text>
-                )}
-              </View>
-              {s < 2 && <View style={[styles.progressLine, step > s && styles.progressLineActive]} />}
-            </View>
-          ))}
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.push('/(tabs)/Home');
+              }
+            }}
+            style={styles.backIcon}
+          >
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>AI Recipe Generator</Text>
+          <View style={styles.placeholder} />
         </View>
-      )}
 
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-      </ScrollView>
-    </LinearGradient>
+        {/* Progress Indicator */}
+        {step < 3 && (
+          <View style={styles.progressContainer}>
+            {[1, 2].map((s) => (
+              <View key={s} style={styles.progressStep}>
+                <View style={[styles.progressDot, step >= s && styles.progressDotActive]}>
+                  {step > s ? (
+                    <Ionicons name="checkmark" size={12} color="white" />
+                  ) : (
+                    <Text style={styles.progressDotText}>{s}</Text>
+                  )}
+                </View>
+                {s < 2 && <View style={[styles.progressLine, step > s && styles.progressLineActive]} />}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Content */}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
   container: {
     flex: 1,
   },

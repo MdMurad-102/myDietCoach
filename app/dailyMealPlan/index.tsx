@@ -1,27 +1,37 @@
 // Daily Meal Plan Generator Screen
 // Generate, customize, and save complete Bangladesh daily meal plans
 
-import React, { useState, useContext } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    ActivityIndicator,
-    Alert,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { generateDailyMealPlan, regenerateMeal, DailyMealPlan, MealPlanOptions } from '../../utils/mealPlanGenerator';
+import React, { useContext, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useMealContext } from '../../context/UnifiedMealContext';
 import { UserContext } from '../../context/UserContext';
+import { DailyMealPlan, generateDailyMealPlan, MealPlanOptions, regenerateMeal } from '../../utils/mealPlanGenerator';
 
 export default function DailyMealPlanGenerator() {
     const [mealPlan, setMealPlan] = useState<DailyMealPlan | null>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+    // Helper function to get local date string (YYYY-MM-DD) without timezone issues
+    const getLocalDateString = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
     const [options, setOptions] = useState<MealPlanOptions>({
         targetCalories: 2000,
         vegetarianOnly: false,
@@ -40,7 +50,7 @@ export default function DailyMealPlanGenerator() {
         for (let i = 0; i < 7; i++) {
             const date = new Date();
             date.setDate(date.getDate() + i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = getLocalDateString(date);
             const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             dates.push({ date: dateStr, label });
         }
@@ -195,262 +205,268 @@ export default function DailyMealPlanGenerator() {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => {
-                        router.push('/(tabs)/Meals');
-                    }}
-                    style={styles.backButton}
-                >
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Daily Meal Plan</Text>
-                <View style={styles.placeholder} />
-            </View>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            router.push('/(tabs)/Meals');
+                        }}
+                        style={styles.backButton}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Daily Meal Plan</Text>
+                    <View style={styles.placeholder} />
+                </View>
 
-            {/* Date Selector */}
-            <View style={styles.dateSection}>
-                <Text style={styles.sectionTitle}>Select Date</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-                    {getDateOptions().map((dateOption) => (
-                        <TouchableOpacity
-                            key={dateOption.date}
-                            style={[
-                                styles.dateButton,
-                                selectedDate === dateOption.date && styles.dateButtonActive,
-                            ]}
-                            onPress={() => setSelectedDate(dateOption.date)}
-                        >
-                            <Text
-                                style={[
-                                    styles.dateButtonText,
-                                    selectedDate === dateOption.date && styles.dateButtonTextActive,
-                                ]}
-                            >
-                                {dateOption.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-
-            {/* Options Section */}
-            <View style={styles.optionsSection}>
-                <Text style={styles.sectionTitle}>Meal Preferences</Text>
-
-                {/* Target Calories */}
-                <View style={styles.optionRow}>
-                    <Text style={styles.optionLabel}>Target Calories:</Text>
-                    <View style={styles.calorieButtons}>
-                        {[1500, 2000, 2500].map((cal) => (
+                {/* Date Selector */}
+                <View style={styles.dateSection}>
+                    <Text style={styles.sectionTitle}>Select Date</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+                        {getDateOptions().map((dateOption) => (
                             <TouchableOpacity
-                                key={cal}
+                                key={dateOption.date}
                                 style={[
-                                    styles.calorieButton,
-                                    options.targetCalories === cal && styles.calorieButtonActive,
+                                    styles.dateButton,
+                                    selectedDate === dateOption.date && styles.dateButtonActive,
                                 ]}
-                                onPress={() => setOptions({ ...options, targetCalories: cal })}
+                                onPress={() => setSelectedDate(dateOption.date)}
                             >
                                 <Text
                                     style={[
-                                        styles.calorieButtonText,
-                                        options.targetCalories === cal && styles.calorieButtonTextActive,
+                                        styles.dateButtonText,
+                                        selectedDate === dateOption.date && styles.dateButtonTextActive,
                                     ]}
                                 >
-                                    {cal}
+                                    {dateOption.label}
                                 </Text>
                             </TouchableOpacity>
                         ))}
-                    </View>
+                    </ScrollView>
                 </View>
 
-                {/* Dietary Preferences */}
-                <View style={styles.optionRow}>
-                    <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() => setOptions({ ...options, vegetarianOnly: !options.vegetarianOnly })}
-                    >
-                        <Ionicons
-                            name={options.vegetarianOnly ? 'checkbox' : 'square-outline'}
-                            size={24}
-                            color="#4CAF50"
-                        />
-                        <Text style={styles.checkboxLabel}>Vegetarian Only</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* Options Section */}
+                <View style={styles.optionsSection}>
+                    <Text style={styles.sectionTitle}>Meal Preferences</Text>
 
-                <View style={styles.optionRow}>
-                    <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() => setOptions({ ...options, highProtein: !options.highProtein })}
-                    >
-                        <Ionicons
-                            name={options.highProtein ? 'checkbox' : 'square-outline'}
-                            size={24}
-                            color="#FF9800"
-                        />
-                        <Text style={styles.checkboxLabel}>High Protein</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.optionRow}>
-                    <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() => setOptions({ ...options, quickMeals: !options.quickMeals })}
-                    >
-                        <Ionicons
-                            name={options.quickMeals ? 'checkbox' : 'square-outline'}
-                            size={24}
-                            color="#2196F3"
-                        />
-                        <Text style={styles.checkboxLabel}>Quick Meals (≤30 min)</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Generate Button */}
-            {!mealPlan && (
-                <TouchableOpacity
-                    style={styles.generateButton}
-                    onPress={handleGeneratePlan}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <>
-                            <Ionicons name="sparkles" size={24} color="#fff" />
-                            <Text style={styles.generateButtonText}>Generate Meal Plan</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            )}
-
-            {/* Meal Plan Display */}
-            {mealPlan && (
-                <View style={styles.mealPlanSection}>
-                    {/* Summary Card */}
-                    <View style={styles.summaryCard}>
-                        <Text style={styles.summaryTitle}>Today's Nutrition</Text>
-                        <View style={styles.summaryRow}>
-                            <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{mealPlan.totalCalories}</Text>
-                                <Text style={styles.summaryLabel}>Calories</Text>
-                            </View>
-                            <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{mealPlan.totalProtein}g</Text>
-                                <Text style={styles.summaryLabel}>Protein</Text>
-                            </View>
-                            <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{mealPlan.totalCarbs}g</Text>
-                                <Text style={styles.summaryLabel}>Carbs</Text>
-                            </View>
-                            <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{mealPlan.totalFat}g</Text>
-                                <Text style={styles.summaryLabel}>Fat</Text>
-                            </View>
+                    {/* Target Calories */}
+                    <View style={styles.optionRow}>
+                        <Text style={styles.optionLabel}>Target Calories:</Text>
+                        <View style={styles.calorieButtons}>
+                            {[1500, 2000, 2500].map((cal) => (
+                                <TouchableOpacity
+                                    key={cal}
+                                    style={[
+                                        styles.calorieButton,
+                                        options.targetCalories === cal && styles.calorieButtonActive,
+                                    ]}
+                                    onPress={() => setOptions({ ...options, targetCalories: cal })}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.calorieButtonText,
+                                            options.targetCalories === cal && styles.calorieButtonTextActive,
+                                        ]}
+                                    >
+                                        {cal}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
                     </View>
 
-                    {/* Meal Cards */}
-                    {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((mealType) => {
-                        const meal = mealPlan[mealType];
-                        return (
-                            <View key={mealType} style={styles.mealCard}>
-                                {/* Meal Header */}
-                                <View style={styles.mealHeader}>
-                                    <View style={styles.mealTitleRow}>
-                                        <Ionicons name={getMealIcon(mealType)} size={24} color="#4CAF50" />
-                                        <Text style={styles.mealType}>
-                                            {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                                        </Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        onPress={() => handleRegenerateMeal(mealType)}
-                                        disabled={loading}
-                                    >
-                                        <Ionicons name="refresh" size={20} color="#2196F3" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* Meal Details */}
-                                <Text style={styles.mealName}>{meal.nameEn}</Text>
-                                <Text style={styles.mealNameBangla}>{meal.name}</Text>
-
-                                <View style={styles.mealNutrition}>
-                                    <View style={styles.nutritionItem}>
-                                        <Text style={styles.nutritionValue}>{meal.calories}</Text>
-                                        <Text style={styles.nutritionLabel}>cal</Text>
-                                    </View>
-                                    <View style={styles.nutritionItem}>
-                                        <Text style={styles.nutritionValue}>{meal.protein}g</Text>
-                                        <Text style={styles.nutritionLabel}>protein</Text>
-                                    </View>
-                                    <View style={styles.nutritionItem}>
-                                        <Text style={styles.nutritionValue}>{meal.carbs}g</Text>
-                                        <Text style={styles.nutritionLabel}>carbs</Text>
-                                    </View>
-                                    <View style={styles.nutritionItem}>
-                                        <Text style={styles.nutritionValue}>{meal.fat}g</Text>
-                                        <Text style={styles.nutritionLabel}>fat</Text>
-                                    </View>
-                                </View>
-
-                                <Text style={styles.mealDescription}>{meal.description}</Text>
-
-                                {/* Tags */}
-                                <View style={styles.tagsContainer}>
-                                    {meal.tags.slice(0, 3).map((tag) => (
-                                        <View key={tag} style={styles.tag}>
-                                            <Text style={styles.tagText}>{tag}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        );
-                    })}
-
-                    {/* Action Buttons */}
-                    <View style={styles.actionButtons}>
+                    {/* Dietary Preferences */}
+                    <View style={styles.optionRow}>
                         <TouchableOpacity
-                            style={styles.regenerateAllButton}
-                            onPress={handleRegenerateAll}
-                            disabled={loading}
+                            style={styles.checkboxRow}
+                            onPress={() => setOptions({ ...options, vegetarianOnly: !options.vegetarianOnly })}
                         >
-                            {loading ? (
-                                <ActivityIndicator color="#2196F3" />
-                            ) : (
-                                <>
-                                    <Ionicons name="refresh-circle" size={20} color="#2196F3" />
-                                    <Text style={styles.regenerateAllText}>Regenerate All</Text>
-                                </>
-                            )}
+                            <Ionicons
+                                name={options.vegetarianOnly ? 'checkbox' : 'square-outline'}
+                                size={24}
+                                color="#4CAF50"
+                            />
+                            <Text style={styles.checkboxLabel}>Vegetarian Only</Text>
                         </TouchableOpacity>
+                    </View>
 
+                    <View style={styles.optionRow}>
                         <TouchableOpacity
-                            style={styles.saveButton}
-                            onPress={handleSavePlan}
-                            disabled={saving}
+                            style={styles.checkboxRow}
+                            onPress={() => setOptions({ ...options, highProtein: !options.highProtein })}
                         >
-                            {saving ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <>
-                                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                                    <Text style={styles.saveButtonText}>Save Plan</Text>
-                                </>
-                            )}
+                            <Ionicons
+                                name={options.highProtein ? 'checkbox' : 'square-outline'}
+                                size={24}
+                                color="#FF9800"
+                            />
+                            <Text style={styles.checkboxLabel}>High Protein</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.optionRow}>
+                        <TouchableOpacity
+                            style={styles.checkboxRow}
+                            onPress={() => setOptions({ ...options, quickMeals: !options.quickMeals })}
+                        >
+                            <Ionicons
+                                name={options.quickMeals ? 'checkbox' : 'square-outline'}
+                                size={24}
+                                color="#2196F3"
+                            />
+                            <Text style={styles.checkboxLabel}>Quick Meals (≤30 min)</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
-            )}
-        </ScrollView>
+
+                {/* Generate Button */}
+                {!mealPlan && (
+                    <TouchableOpacity
+                        style={styles.generateButton}
+                        onPress={handleGeneratePlan}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Ionicons name="sparkles" size={24} color="#fff" />
+                                <Text style={styles.generateButtonText}>Generate Meal Plan</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                )}
+
+                {/* Meal Plan Display */}
+                {mealPlan && (
+                    <View style={styles.mealPlanSection}>
+                        {/* Summary Card */}
+                        <View style={styles.summaryCard}>
+                            <Text style={styles.summaryTitle}>Today's Nutrition</Text>
+                            <View style={styles.summaryRow}>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalCalories}</Text>
+                                    <Text style={styles.summaryLabel}>Calories</Text>
+                                </View>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalProtein}g</Text>
+                                    <Text style={styles.summaryLabel}>Protein</Text>
+                                </View>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalCarbs}g</Text>
+                                    <Text style={styles.summaryLabel}>Carbs</Text>
+                                </View>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalFat}g</Text>
+                                    <Text style={styles.summaryLabel}>Fat</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Meal Cards */}
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((mealType) => {
+                            const meal = mealPlan[mealType];
+                            return (
+                                <View key={mealType} style={styles.mealCard}>
+                                    {/* Meal Header */}
+                                    <View style={styles.mealHeader}>
+                                        <View style={styles.mealTitleRow}>
+                                            <Ionicons name={getMealIcon(mealType)} size={24} color="#4CAF50" />
+                                            <Text style={styles.mealType}>
+                                                {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                                            </Text>
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => handleRegenerateMeal(mealType)}
+                                            disabled={loading}
+                                        >
+                                            <Ionicons name="refresh" size={20} color="#2196F3" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* Meal Details */}
+                                    <Text style={styles.mealName}>{meal.nameEn}</Text>
+                                    <Text style={styles.mealNameBangla}>{meal.name}</Text>
+
+                                    <View style={styles.mealNutrition}>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.calories}</Text>
+                                            <Text style={styles.nutritionLabel}>cal</Text>
+                                        </View>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.protein}g</Text>
+                                            <Text style={styles.nutritionLabel}>protein</Text>
+                                        </View>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.carbs}g</Text>
+                                            <Text style={styles.nutritionLabel}>carbs</Text>
+                                        </View>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.fat}g</Text>
+                                            <Text style={styles.nutritionLabel}>fat</Text>
+                                        </View>
+                                    </View>
+
+                                    <Text style={styles.mealDescription}>{meal.description}</Text>
+
+                                    {/* Tags */}
+                                    <View style={styles.tagsContainer}>
+                                        {meal.tags.slice(0, 3).map((tag) => (
+                                            <View key={tag} style={styles.tag}>
+                                                <Text style={styles.tagText}>{tag}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+                            );
+                        })}
+
+                        {/* Action Buttons */}
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                                style={styles.regenerateAllButton}
+                                onPress={handleRegenerateAll}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="#2196F3" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="refresh-circle" size={20} color="#2196F3" />
+                                        <Text style={styles.regenerateAllText}>Regenerate All</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.saveButton}
+                                onPress={handleSavePlan}
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                                        <Text style={styles.saveButtonText}>Save Plan</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
     container: {
         flex: 1,
         backgroundColor: '#F5F5F5',

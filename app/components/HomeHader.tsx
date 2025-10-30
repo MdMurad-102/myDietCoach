@@ -1,9 +1,9 @@
-import React, { useContext } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '@/context/UserContext';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import React, { useContext } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function HomeHeader() {
   const context = useContext(UserContext);
@@ -32,7 +32,14 @@ export default function HomeHeader() {
           <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications' as any)}>
+      <TouchableOpacity
+        style={styles.notificationButton}
+        onPress={() => {
+          console.log('Notification button pressed');
+          // For now, show alert since we don't have a notifications page yet
+          alert('Notifications feature coming soon!');
+        }}
+      >
         <Ionicons name="notifications-outline" size={26} color="white" />
         <View style={styles.notificationBadge}>
           <Text style={styles.notificationText}>3</Text>

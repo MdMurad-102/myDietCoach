@@ -314,15 +314,16 @@ app.get('/api/recipes/custom/:userId', async (req, res) => {
 // Create or update daily meal plan (all 4 meals: breakfast, lunch, dinner, snacks)
 app.post('/api/meals/daily-plan', async (req, res) => {
     const { userId, date, meals } = req.body;
-    // meals should be an object: { breakfast: {...}, lunch: {...}, dinner: {...}, snacks: {...} }
+    // meals should be an object: { breakfast: {...}, lunch: {...}, dinner: {...}, snacks: {...}, waterGlasses: number }
 
     try {
-        // Calculate total nutrition
+        // Calculate total nutrition (excluding waterGlasses)
         let totalCalories = 0;
         let totalProtein = 0;
 
-        Object.values(meals).forEach(meal => {
-            if (meal) {
+        Object.entries(meals).forEach(([key, meal]) => {
+            // Skip non-meal properties like waterGlasses
+            if (key !== 'waterGlasses' && meal && typeof meal === 'object') {
                 totalCalories += meal.calories || 0;
                 totalProtein += meal.protein || 0;
             }
@@ -928,9 +929,10 @@ app.put('/api/daily-meal-plan/consume', async (req, res) => {
 // START SERVER
 // ============================================
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 MyDietCoach API Server running on port ${PORT}`);
     console.log(`📡 Health check: http://localhost:${PORT}/health`);
+    console.log(`📱 Mobile app should connect to: http://192.168.1.100:${PORT}/api`);
 });
 
 // Handle graceful shutdown

@@ -1,5 +1,6 @@
 import { Slot } from "expo-router";
 import { useState } from "react";
+import { MealTimingProvider } from "../context/MealTimingContext";
 import { MealProvider } from "../context/UnifiedMealContext";
 import { UserContext, UserType } from "../context/UserContext";
 
@@ -8,10 +9,12 @@ export default function RootLayout() {
 
   return (
     <UserContext.Provider value={{ user, setUser }}>
-      <MealProvider>
-        {/* ✅ Slot will automatically render your nested routes */}
-        <Slot />
-      </MealProvider>
+      <MealTimingProvider>
+        <MealProvider>
+          {/* ✅ Slot will automatically render your nested routes */}
+          <Slot />
+        </MealProvider>
+      </MealTimingProvider>
     </UserContext.Provider>
   );
 }

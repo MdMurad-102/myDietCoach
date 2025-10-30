@@ -1,19 +1,19 @@
-import React, { useState, useContext, useEffect } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    Dimensions,
-    Alert,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { UserContext } from '@/context/UserContext';
-import { useRouter } from 'expo-router';
 import { generateRecipeFromText } from '@/service/AiModel';
 import { initializeNotifications, requestNotificationPermissions } from '@/service/dailyReminders';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useContext, useEffect, useState } from 'react';
+import {
+    Alert,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2;
@@ -140,28 +140,28 @@ Format your response as JSON:
         {
             title: 'Full Day\nMeal Plan',
             icon: 'calendar',
-            gradient: ['#FFD166', '#F77F00'],
+            gradient: ['#FFD166', '#F77F00'] as const,
             route: '/recipeGenerator' as any,
             description: 'Get complete daily meal suggestions',
         },
         {
             title: 'AI Chat\nNutritionist',
             icon: 'chatbubbles',
-            gradient: ['#06D6A0', '#118AB2'],
+            gradient: ['#06D6A0', '#118AB2'] as const,
             route: '/AIChat',
             description: 'Ask any diet or food questions',
         },
         {
             title: 'BMI Calculator\n& Coach',
             icon: 'calculator',
-            gradient: ['#7209B7', '#560BAD'],
+            gradient: ['#7209B7', '#560BAD'] as const,
             route: '/BMI',
             description: 'Check your BMI with AI advice',
         },
         {
             title: 'Progress\nTracking',
             icon: 'trending-up',
-            gradient: ['#F72585', '#B5179E'],
+            gradient: ['#F72585', '#B5179E'] as const,
             route: '/Progress',
             description: 'Track your fitness journey',
         },
@@ -194,6 +194,9 @@ Format your response as JSON:
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             {/* Header */}
             <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
+                </TouchableOpacity>
                 <View style={styles.headerContent}>
                     <View>
                         <Text style={styles.greeting}>Hello, {user.name}! 👋</Text>
@@ -396,6 +399,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
+    },
+    backButton: {
+        padding: 8,
+        marginBottom: 10,
+        alignSelf: 'flex-start',
     },
     headerContent: {
         flexDirection: 'row',

@@ -1,19 +1,20 @@
-import React, { useState, useContext, useRef, useEffect, useCallback } from 'react';
+import { UserContext } from '@/context/UserContext';
+import { generateRecipeFromText } from '@/service/AiModel';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-    View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    ScrollView,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    ActivityIndicator,
+    View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { UserContext } from '@/context/UserContext';
-import { generateRecipeFromText } from '@/service/AiModel';
 
 interface Message {
     id: string;
@@ -33,10 +34,15 @@ const promptSuggestions = [
     "Suggest a healthy breakfast.",
 ];
 
-const ChatHeader = () => (
+const ChatHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
-        <Text style={styles.headerTitle}>AI Nutritionist</Text>
-        <Text style={styles.headerSubtitle}>Your personal diet assistant</Text>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>AI Nutritionist</Text>
+            <Text style={styles.headerSubtitle}>Your personal diet assistant</Text>
+        </View>
     </LinearGradient>
 );
 
@@ -113,6 +119,7 @@ export default function EnhancedAIChat() {
     const [isLoading, setIsLoading] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
     const context = useContext(UserContext);
+    const router = useRouter();
 
     const { user } = context || {};
 
@@ -176,7 +183,7 @@ export default function EnhancedAIChat() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         >
-            <ChatHeader />
+            <ChatHeader onBack={() => router.back()} />
             <ScrollView
                 ref={scrollViewRef}
                 style={styles.chatContainer}
@@ -214,6 +221,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderBottomLeftRadius: 25,
         borderBottomRightRadius: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    backButton: {
+        padding: 8,
+        marginRight: 12,
+    },
+    headerTextContainer: {
+        flex: 1,
+        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 28,

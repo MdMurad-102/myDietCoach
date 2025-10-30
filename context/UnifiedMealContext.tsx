@@ -8,13 +8,11 @@ import React, {
   useState,
 } from "react";
 import {
-  getUserMealPlans,
-  getUserRecipes,
-  saveCustomRecipe,
-  getMealsForDate,
-  saveDailyMealPlan,
   addMealToDate,
-  markMealConsumed as markMealConsumedAPI,
+  getMealsForDate,
+  getUserMealPlans,
+  saveCustomRecipe,
+  saveDailyMealPlan
 } from "../service/api";
 import { UserContext } from "./UserContext";
 
@@ -119,18 +117,26 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   const userContext = useContext(UserContext);
   const user = userContext?.user;
 
+  // Helper function to get local date string (YYYY-MM-DD) without timezone issues
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [dailyMealPlans, setDailyMealPlans] = useState<
     Record<string, DailyMealPlan>
   >({});
   const [generatedMeals, setGeneratedMeals] = useState<MealItem[]>([]);
   const [savedMeals, setSavedMeals] = useState<MealItem[]>([]);
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString(new Date())
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const todayString = new Date().toISOString().split("T")[0];
+  const todayString = getLocalDateString(new Date());
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
@@ -149,9 +155,9 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       const plansMap: Record<string, DailyMealPlan> = {};
 
       plans.forEach((plan: any) => {
-        const planDate = plan.scheduled_date || plan.created_at
-          ? new Date(plan.scheduled_date || plan.created_at).toISOString().split("T")[0]
-          : todayString;
+        // scheduled_date comes from database as YYYY-MM-DD string, use it directly
+        const planDate = plan.scheduled_date || todayString;
+        console.log('📅 Processing plan for date:', planDate, '(scheduled_date:', plan.scheduled_date, ')');
 
         const mealPlanData = plan.meal_plan_data || {};
         const allMeals: MealItem[] = [];
@@ -196,6 +202,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       });
 
       console.log('📊 Loaded plans map:', Object.keys(plansMap).length, 'dates');
+      console.log('📋 Plan dates:', Object.keys(plansMap).join(', '));
       setDailyMealPlans(plansMap);
 
       // Load today's meal plan specifically
@@ -418,11 +425,27 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     setDailyMealPlans((prev) => {
       const updated = { ...prev };
       Object.keys(updated).forEach((date) => {
+        const plan = updated[date];
+
+        // Update the meal's consumed state
+        const updatedMeals = plan.meals.map((meal) =>
+          meal.id === mealId ? { ...meal, consumed } : meal
+        );
+
+        // Recalculate consumed calories and protein based on consumed meals
+        const consumedCalories = updatedMeals
+          .filter(meal => meal.consumed)
+          .reduce((sum, meal) => sum + (meal.calories || 0), 0);
+
+        const consumedProtein = updatedMeals
+          .filter(meal => meal.consumed)
+          .reduce((sum, meal) => sum + (meal.protein || 0), 0);
+
         updated[date] = {
-          ...updated[date],
-          meals: updated[date].meals.map((meal) =>
-            meal.id === mealId ? { ...meal, consumed } : meal
-          ),
+          ...plan,
+          meals: updatedMeals,
+          consumedCalories,
+          consumedProtein,
         };
       });
       return updated;
@@ -437,17 +460,22 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       try {
         setIsLoading(true);
 
-        // Get current meal plan data
+        // Get current meal plan data from API
         const todayData = await getMealsForDate(user.id, todayString);
-        const mealPlanData = todayData?.meal_plan_data || {};
+        console.log('💧 Current data from API:', JSON.stringify(todayData, null, 2));
 
-        // Update water intake in the meal plan data
+        // Get existing meals (breakfast, lunch, dinner, snacks)
+        const existingMeals = todayData?.meals || {};
+        console.log('🍽️ Existing meals:', JSON.stringify(existingMeals, null, 2));
+
+        // Update water intake while preserving existing meals
         const updatedMealPlanData = {
-          ...mealPlanData,
+          ...existingMeals,
           waterGlasses: glasses
         };
+        console.log('💾 Data to save:', JSON.stringify(updatedMealPlanData, null, 2));
 
-        // Save the updated plan
+        // Save the updated plan with preserved meals
         await saveDailyMealPlan(user.id, todayString, updatedMealPlanData);
 
         // Optimistically update the UI

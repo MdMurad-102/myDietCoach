@@ -29,13 +29,21 @@ export default function Meals() {
   const mealContext = useMealContext();
   const router = useRouter();
 
+  // Helper function to get local date string (YYYY-MM-DD) without timezone issues
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // State management
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<MealItem | null>(null);
   const [showMealDetailModal, setShowMealDetailModal] = useState(false);
   const [showDateSelector, setShowDateSelector] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString(new Date())
   );
   const [viewType, setViewType] = useState<MealViewType>("daily");
   const [showAddMealModal, setShowAddMealModal] = useState(false);
@@ -149,7 +157,7 @@ export default function Meals() {
     return Array.from({ length: 14 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - 3 + i); // Show 3 days before and 10 days after
-      return date.toISOString().split("T")[0];
+      return getLocalDateString(date);
     });
   };
 
@@ -225,7 +233,7 @@ export default function Meals() {
         >
           {getNext14Days().map((date) => {
             const isSelected = selectedDate === date;
-            const isToday = date === new Date().toISOString().split("T")[0];
+            const isToday = date === getLocalDateString(new Date());
             const hasMeals = dailyMealPlans[date]?.meals?.length > 0;
 
             return (
