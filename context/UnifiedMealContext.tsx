@@ -155,9 +155,15 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       const plansMap: Record<string, DailyMealPlan> = {};
 
       plans.forEach((plan: any) => {
-        // scheduled_date comes from database as YYYY-MM-DD string, use it directly
-        const planDate = plan.scheduled_date || todayString;
-        console.log('📅 Processing plan for date:', planDate, '(scheduled_date:', plan.scheduled_date, ')');
+        // scheduled_date from database - extract YYYY-MM-DD only
+        let planDate = plan.scheduled_date || todayString;
+
+        // If scheduled_date contains timestamp, extract date part only
+        if (planDate.includes('T')) {
+          planDate = planDate.split('T')[0];
+        }
+
+        console.log('📅 Processing plan for date:', planDate, '(original scheduled_date:', plan.scheduled_date, ')');
 
         const mealPlanData = plan.meal_plan_data || {};
         const allMeals: MealItem[] = [];
@@ -353,10 +359,11 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       setIsLoading(true);
       setError(null);
 
-      console.log("💾 Saving full daily meal plan for:", date);
+      console.log("💾 Saving full daily meal plan for date:", date);
+      console.log("💾 Date type:", typeof date, "- Value:", date);
       await saveDailyMealPlan(user.id, date, meals);
       await loadData();
-      console.log("✅ Full daily plan saved successfully");
+      console.log("✅ Full daily plan saved successfully for:", date);
     } catch (error) {
       console.error("❌ Error saving full daily plan:", error);
       setError("Failed to save daily meal plan");

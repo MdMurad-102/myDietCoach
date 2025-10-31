@@ -316,6 +316,8 @@ app.post('/api/meals/daily-plan', async (req, res) => {
     const { userId, date, meals } = req.body;
     // meals should be an object: { breakfast: {...}, lunch: {...}, dinner: {...}, snacks: {...}, waterGlasses: number }
 
+    console.log('📥 Backend received date:', date, 'Type:', typeof date);
+
     try {
         // Calculate total nutrition (excluding waterGlasses)
         let totalCalories = 0;
@@ -349,10 +351,11 @@ app.post('/api/meals/daily-plan', async (req, res) => {
             // Create new plan
             result = await pool.query(
                 `INSERT INTO scheduled_meals (user_id, scheduled_date, meal_type, meal_plan_data, total_calories, total_protein, date_created, last_updated)
-                 VALUES ($1, $2, 'daily_plan', $3, $4, $5, NOW(), NOW())
+                 VALUES ($1, $2::date, 'daily_plan', $3, $4, $5, NOW(), NOW())
                  RETURNING *`,
                 [userId, date, JSON.stringify(meals), totalCalories, totalProtein]
             );
+            console.log('💾 Saved to database with date:', result.rows[0].scheduled_date);
         }
 
         res.json({

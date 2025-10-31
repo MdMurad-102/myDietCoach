@@ -68,6 +68,26 @@ export default function Meals() {
     refreshMealData();
   }, []);
 
+  // Auto-select first date with meals when switching to daily view
+  useEffect(() => {
+    if (viewType === 'daily' && Object.keys(dailyMealPlans).length > 0) {
+      // Check if current selected date has meals
+      const currentHasMeals = dailyMealPlans[selectedDate]?.meals?.length > 0;
+
+      if (!currentHasMeals) {
+        // Find most recent date with meals
+        const datesWithMeals = Object.keys(dailyMealPlans)
+          .filter(date => dailyMealPlans[date]?.meals?.length > 0)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+        if (datesWithMeals.length > 0) {
+          console.log('🔄 Auto-selecting date with meals:', datesWithMeals[0]);
+          setSelectedDate(datesWithMeals[0]);
+        }
+      }
+    }
+  }, [viewType, dailyMealPlans]);
+
   const onRefresh = () => {
     setRefreshing(true);
     refreshMealData();
@@ -215,6 +235,11 @@ export default function Meals() {
   const renderDailyView = () => {
     const plan = getMealPlanForDate(selectedDate);
     const meals = plan?.meals || [];
+    console.log('🍽️ Daily View - Selected Date:', selectedDate);
+    console.log('🍽️ Daily View - Plan:', plan);
+    console.log('🍽️ Daily View - Meals count:', meals.length);
+    console.log('🍽️ Daily View - All dates in dailyMealPlans:', Object.keys(dailyMealPlans));
+
     const { breakfast, lunch, dinner, snacks, others } = getMealsByType(meals);
     const totals = calculateDailyTotals(meals);
     const goals = plan?.goals || {
