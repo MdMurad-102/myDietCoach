@@ -66,12 +66,6 @@ export default function Profile() {
       color: "#3498db",
     },
     {
-      title: "Progress Dashboard",
-      icon: "analytics-outline",
-      screen: "/Progress",
-      color: "#2ecc71",
-    },
-    {
       title: "AI Nutritionist",
       icon: "chatbubbles-outline",
       screen: "/AIChat",

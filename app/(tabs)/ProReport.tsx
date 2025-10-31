@@ -1,9 +1,10 @@
-import React, { useContext } from "react";
-import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { UserContext } from "@/context/UserContext";
 import Button from "@/app/components/Button";
+import { UserContext } from "@/context/UserContext";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useContext } from "react";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface MetricCardProps {
     icon: keyof typeof Ionicons.glyphMap;
@@ -37,6 +38,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ icon, text, color }) => (
 
 export default function ProReport() {
     const context = useContext(UserContext);
+    const router = useRouter();
 
     if (!context) {
         return (
@@ -66,6 +68,36 @@ export default function ProReport() {
             </LinearGradient>
 
             <View style={styles.content}>
+                {/* Navigation Buttons */}
+                <View style={styles.navigationSection}>
+                    <TouchableOpacity
+                        style={styles.navButton}
+                        onPress={() => router.push("/Progress")}
+                    >
+                        <View style={[styles.navIconContainer, { backgroundColor: "#2ecc7120" }]}>
+                            <Ionicons name="analytics-outline" size={28} color="#2ecc71" />
+                        </View>
+                        <View style={styles.navTextContainer}>
+                            <Text style={styles.navTitle}>Progress Dashboard</Text>
+                            <Text style={styles.navSubtitle}>Track your daily progress</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.navButton}
+                        onPress={() => router.push("/MyReport")}
+                    >
+                        <View style={[styles.navIconContainer, { backgroundColor: "#3498db20" }]}>
+                            <Ionicons name="document-text-outline" size={28} color="#3498db" />
+                        </View>
+                        <View style={styles.navTextContainer}>
+                            <Text style={styles.navTitle}>My Report</Text>
+                            <Text style={styles.navSubtitle}>View detailed reports</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+                    </TouchableOpacity>
+                </View>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Performance Summary</Text>
                     <View style={styles.metricsGrid}>
@@ -240,5 +272,42 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         marginBottom: 20,
         textAlign: "center",
+    },
+    navigationSection: {
+        marginBottom: 20,
+    },
+    navButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#fff",
+        borderRadius: 15,
+        padding: 16,
+        marginBottom: 12,
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    navIconContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 15,
+    },
+    navTextContainer: {
+        flex: 1,
+    },
+    navTitle: {
+        fontSize: 17,
+        fontWeight: "600",
+        color: "#333",
+        marginBottom: 4,
+    },
+    navSubtitle: {
+        fontSize: 14,
+        color: "#666",
     },
 });
