@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { useMealContext } from "@/context/UnifiedMealContext";
 import { UserContext } from "@/context/UserContext";
 import { isUserProfileComplete } from "@/utils/userHelpers";
@@ -24,6 +25,7 @@ import SimpleWaterTracker from "../components/SimpleWaterTracker";
 export default function Home() {
   const context = useContext(UserContext);
   const { user } = context!;
+  const { colors } = useTheme();
   const { getTodayMealPlan, refreshMealData, markMealConsumed } = useMealContext();
   const router = useRouter();
 
@@ -74,8 +76,8 @@ export default function Home() {
 
   if (!user) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading user data...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading user data...</Text>
       </View>
     );
   }
@@ -88,7 +90,7 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle="light-content" backgroundColor="#667eea" />
         <HomeHeader />
 
@@ -102,10 +104,10 @@ export default function Home() {
           <QuickActions />
 
           {/* Today's Progress Summary */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.cardHeader}>
               <Ionicons name="analytics-outline" size={24} color="#667eea" />
-              <Text style={styles.cardTitle}>Today's Snapshot</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Today's Snapshot</Text>
             </View>
 
             <View style={styles.progressGrid}>
@@ -151,10 +153,10 @@ export default function Home() {
           </View>
 
           {/* Meal Plan Preview */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.cardHeader}>
               <Ionicons name="restaurant-outline" size={24} color="#FF9800" />
-              <Text style={styles.cardTitle}>Today's Meals</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Today's Meals</Text>
               {hasActualMeals && (
                 <TouchableOpacity
                   style={styles.viewAllButton}
@@ -190,7 +192,7 @@ export default function Home() {
             ) : (
               <View style={styles.emptyStateContainer}>
                 <Ionicons name="fast-food-outline" size={40} color="#ccc" />
-                <Text style={styles.emptyStateText}>No meals planned yet.</Text>
+                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>No meals planned yet.</Text>
                 <TouchableOpacity
                   style={styles.planMealsButton}
                   onPress={() => router.push("/(tabs)/Meals")}

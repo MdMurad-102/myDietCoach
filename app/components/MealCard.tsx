@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { MealItem } from '@/context/UnifiedMealContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MealItem } from '@/context/UnifiedMealContext';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Button from './Button';
 
 interface MealCardProps {
@@ -24,20 +25,22 @@ const getMealEmoji = (mealType?: string) => {
 };
 
 const MealCard: React.FC<MealCardProps> = ({ meal, onPress, onSchedule, onSave, isSaved }) => {
+    const { colors, isDarkMode } = useTheme();
+
     return (
         <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
             <LinearGradient
-                colors={['#ffffff', '#f8f9fa']}
+                colors={isDarkMode ? [colors.card, colors.surface] : ['#ffffff', '#f8f9fa']}
                 style={styles.card}
             >
                 <View style={styles.header}>
                     <Text style={styles.emoji}>{getMealEmoji(meal.mealType)}</Text>
                     <View style={styles.titleContainer}>
-                        <Text style={styles.name} numberOfLines={2}>{meal.recipeName || meal.name}</Text>
+                        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{meal.recipeName || meal.name}</Text>
                         {meal.nameBn && (
-                            <Text style={styles.nameBangla} numberOfLines={1}>{meal.nameBn}</Text>
+                            <Text style={[styles.nameBangla, { color: colors.textSecondary }]} numberOfLines={1}>{meal.nameBn}</Text>
                         )}
-                        <Text style={styles.type}>{meal.mealType || 'Meal'}</Text>
+                        <Text style={[styles.type, { color: colors.textSecondary }]}>{meal.mealType || 'Meal'}</Text>
                     </View>
                     {meal.mealType && (
                         <View style={styles.aiBadge}>
@@ -49,15 +52,15 @@ const MealCard: React.FC<MealCardProps> = ({ meal, onPress, onSchedule, onSave, 
                 <View style={styles.statsContainer}>
                     <View style={styles.stat}>
                         <Ionicons name="flame-outline" size={16} color="#FF6B35" />
-                        <Text style={styles.statText}>{meal.calories} kcal</Text>
+                        <Text style={[styles.statText, { color: colors.textSecondary }]}>{meal.calories} kcal</Text>
                     </View>
                     <View style={styles.stat}>
                         <Ionicons name="fitness-outline" size={16} color="#4ECDC4" />
-                        <Text style={styles.statText}>{meal.protein}g protein</Text>
+                        <Text style={[styles.statText, { color: colors.textSecondary }]}>{meal.protein}g protein</Text>
                     </View>
                     <View style={styles.stat}>
                         <Ionicons name="time-outline" size={16} color="#95A5A6" />
-                        <Text style={styles.statText}>{meal.cookingTime || 'N/A'}</Text>
+                        <Text style={[styles.statText, { color: colors.textSecondary }]}>{meal.cookingTime || 'N/A'}</Text>
                     </View>
                 </View>
 

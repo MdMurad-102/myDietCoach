@@ -1,3 +1,4 @@
+import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
@@ -18,10 +19,16 @@ interface MealPreviewProps {
 
 const MealPreview: React.FC<MealPreviewProps> = ({ meal, onMarkEaten, onReplace }) => {
     const isConsumed = meal.consumed || false;
+    const { colors, isDarkMode } = useTheme();
 
     return (
         <LinearGradient
-            colors={isConsumed ? ['#e8f5e9', '#c8e6c9'] : ['#f8f9fa', '#e9f0f7']}
+            colors={isConsumed
+                ? ['#e8f5e9', '#c8e6c9']
+                : isDarkMode
+                    ? [colors.card, colors.surface]
+                    : ['#f8f9fa', '#e9f0f7']
+            }
             style={[styles.card, isConsumed && styles.consumedCard]}
         >
             {isConsumed && (
@@ -36,15 +43,15 @@ const MealPreview: React.FC<MealPreviewProps> = ({ meal, onMarkEaten, onReplace 
                     size={20}
                     color={isConsumed ? "#2E7D32" : "#34A853"}
                 />
-                <Text style={[styles.time, isConsumed && styles.consumedTime]}>
+                <Text style={[styles.time, { color: colors.text }, isConsumed && styles.consumedTime]}>
                     {meal.time}
                 </Text>
             </View>
-            <Text style={styles.name} numberOfLines={2}>{meal.name}</Text>
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{meal.name}</Text>
             <View style={styles.nutritionRow}>
-                <Text style={styles.calories}>{meal.calories} kcal</Text>
+                <Text style={[styles.calories, { color: colors.textSecondary }]}>{meal.calories} kcal</Text>
                 {meal.protein && (
-                    <Text style={styles.protein}>{meal.protein}g protein</Text>
+                    <Text style={[styles.protein, { color: colors.textSecondary }]}>{meal.protein}g protein</Text>
                 )}
             </View>
             <View style={styles.actions}>

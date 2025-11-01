@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { MealItem, useMealContext } from "@/context/UnifiedMealContext";
 import { UserContext } from "@/context/UserContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -26,6 +27,7 @@ type MealViewType = "daily" | "all";
 
 export default function Meals() {
   const context = useContext(UserContext);
+  const { colors } = useTheme();
   const mealContext = useMealContext();
   const router = useRouter();
 
@@ -580,7 +582,7 @@ export default function Meals() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
         <View style={styles.headerTop}>
           <View>
@@ -673,45 +675,45 @@ export default function Meals() {
         onRequestClose={() => setShowMealDetailModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.mealDetailModal}>
+          <View style={[styles.mealDetailModal, { backgroundColor: colors.card }]}>
             {selectedMeal && (
               <>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{selectedMeal.recipeName}</Text>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>{selectedMeal.recipeName}</Text>
                   <TouchableOpacity onPress={() => setShowMealDetailModal(false)}>
-                    <Ionicons name="close" size={28} color="#333" />
+                    <Ionicons name="close" size={28} color={colors.text} />
                   </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.mealDetailContent}>
                   <View style={styles.nutritionGrid}>
                     <View style={styles.nutritionItem}>
-                      <Text style={styles.nutritionValue}>{selectedMeal.calories}</Text>
-                      <Text style={styles.nutritionLabel}>Calories</Text>
+                      <Text style={[styles.nutritionValue, { color: colors.text }]}>{selectedMeal.calories}</Text>
+                      <Text style={[styles.nutritionLabel, { color: colors.textSecondary }]}>Calories</Text>
                     </View>
                     <View style={styles.nutritionItem}>
-                      <Text style={styles.nutritionValue}>{selectedMeal.protein}g</Text>
-                      <Text style={styles.nutritionLabel}>Protein</Text>
+                      <Text style={[styles.nutritionValue, { color: colors.text }]}>{selectedMeal.protein}g</Text>
+                      <Text style={[styles.nutritionLabel, { color: colors.textSecondary }]}>Protein</Text>
                     </View>
                     {selectedMeal.carbs && (
                       <View style={styles.nutritionItem}>
-                        <Text style={styles.nutritionValue}>{selectedMeal.carbs}g</Text>
-                        <Text style={styles.nutritionLabel}>Carbs</Text>
+                        <Text style={[styles.nutritionValue, { color: colors.text }]}>{selectedMeal.carbs}g</Text>
+                        <Text style={[styles.nutritionLabel, { color: colors.textSecondary }]}>Carbs</Text>
                       </View>
                     )}
                     {selectedMeal.fat && (
                       <View style={styles.nutritionItem}>
-                        <Text style={styles.nutritionValue}>{selectedMeal.fat}g</Text>
-                        <Text style={styles.nutritionLabel}>Fat</Text>
+                        <Text style={[styles.nutritionValue, { color: colors.text }]}>{selectedMeal.fat}g</Text>
+                        <Text style={[styles.nutritionLabel, { color: colors.textSecondary }]}>Fat</Text>
                       </View>
                     )}
                   </View>
 
                   {selectedMeal.ingredients && selectedMeal.ingredients.length > 0 && (
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>Ingredients</Text>
+                      <Text style={[styles.detailSectionTitle, { color: colors.text }]}>Ingredients</Text>
                       {selectedMeal.ingredients.map((ingredient, index) => (
-                        <Text key={index} style={styles.detailSectionText}>
+                        <Text key={index} style={[styles.detailSectionText, { color: colors.textSecondary }]}>
                           • {ingredient}
                         </Text>
                       ))}
@@ -720,9 +722,9 @@ export default function Meals() {
 
                   {selectedMeal.instructions && selectedMeal.instructions.length > 0 && (
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>Instructions</Text>
+                      <Text style={[styles.detailSectionTitle, { color: colors.text }]}>Instructions</Text>
                       {selectedMeal.instructions.map((instruction, index) => (
-                        <Text key={index} style={styles.detailSectionText}>
+                        <Text key={index} style={[styles.detailSectionText, { color: colors.textSecondary }]}>
                           {index + 1}. {instruction}
                         </Text>
                       ))}

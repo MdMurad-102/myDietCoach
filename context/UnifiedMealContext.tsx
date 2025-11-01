@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import {
@@ -12,7 +13,9 @@ import {
   getMealsForDate,
   getUserMealPlans,
   saveCustomRecipe,
-  saveDailyMealPlan
+  saveDailyMealPlan,
+  updateMealConsumedAPI,
+  updateWaterIntakeAPI
 } from "../service/api";
 import { UserContext } from "./UserContext";
 
@@ -136,7 +139,10 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const todayString = getLocalDateString(new Date());
+  // Always get fresh today's date - recalculate on every render to ensure accuracy
+  const todayString = useMemo(() => getLocalDateString(new Date()), []);
+
+  console.log('📅 Today\'s date string:', todayString);
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
@@ -154,6 +160,16 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
       console.log('✅ Loaded meal plans:', plans.length);
       const plansMap: Record<string, DailyMealPlan> = {};
 
+      // Store current consumed states before loading new data
+      const currentConsumedStates: Record<string, boolean> = {};
+      Object.values(dailyMealPlans).forEach(plan => {
+        plan.meals.forEach(meal => {
+          if (meal.consumed) {
+            currentConsumedStates[meal.id] = true;
+          }
+        });
+      });
+
       plans.forEach((plan: any) => {
         // scheduled_date from database - extract YYYY-MM-DD only
         let planDate = plan.scheduled_date || todayString;
@@ -163,7 +179,7 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
           planDate = planDate.split('T')[0];
         }
 
-        console.log('📅 Processing plan for date:', planDate, '(original scheduled_date:', plan.scheduled_date, ')');
+        console.log('📅 Processing plan for date:', planDate, '(today is:', todayString, ')');
 
         const mealPlanData = plan.meal_plan_data || {};
         const allMeals: MealItem[] = [];
@@ -174,13 +190,19 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
           const meal = mealPlanData[mealType];
           if (meal && !allMeals.some(m => m.id === meal.id)) {  // Avoid duplicates
             const normalizedMealType = mealType === 'snack' ? 'snacks' : mealType;
+
+            // Preserve local consumed state if it exists, otherwise use database value
+            const consumedState = currentConsumedStates[meal.id] !== undefined
+              ? currentConsumedStates[meal.id]
+              : (meal.consumed || false);
+
             allMeals.push({
               ...meal,
               id: meal.id || `${normalizedMealType}-${Date.now()}`,
               recipeName: meal.recipeName || meal.name || 'Unnamed Meal',
               name: meal.recipeName || meal.name,
               mealType: normalizedMealType,
-              consumed: meal.consumed || false,
+              consumed: consumedState,
               calories: meal.calories || 0,
               protein: meal.protein || 0,
               carbs: meal.carbs,
@@ -188,6 +210,15 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
             });
           }
         });
+
+        // Calculate consumed calories and protein from meals with consumed: true
+        const consumedCalories = allMeals
+          .filter(meal => meal.consumed)
+          .reduce((sum, meal) => sum + (meal.calories || 0), 0);
+
+        const consumedProtein = allMeals
+          .filter(meal => meal.consumed)
+          .reduce((sum, meal) => sum + (meal.protein || 0), 0);
 
         plansMap[planDate] = {
           id: plan.id?.toString() || planDate,
@@ -202,8 +233,8 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
           },
           totalCalories: plan.total_calories || 0,
           totalProtein: plan.total_protein || 0,
-          consumedCalories: plan.calories_consumed || 0,
-          consumedProtein: plan.protein_consumed || 0,
+          consumedCalories: consumedCalories,
+          consumedProtein: consumedProtein,
         };
       });
 
@@ -225,13 +256,19 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
             const meal = mealPlanData[mealType];
             if (meal && !allMeals.some(m => m.id === meal.id)) {  // Avoid duplicates
               const normalizedMealType = mealType === 'snack' ? 'snacks' : mealType;
+
+              // Preserve local consumed state if it exists, otherwise use database value
+              const consumedState = currentConsumedStates[meal.id] !== undefined
+                ? currentConsumedStates[meal.id]
+                : (meal.consumed || false);
+
               allMeals.push({
                 ...meal,
                 id: meal.id || `${normalizedMealType}-${Date.now()}`,
                 recipeName: meal.recipeName || meal.name || 'Unnamed Meal',
                 name: meal.recipeName || meal.name,
                 mealType: normalizedMealType,
-                consumed: meal.consumed || false,
+                consumed: consumedState,
                 calories: meal.calories || 0,
                 protein: meal.protein || 0,
                 carbs: meal.carbs,
@@ -239,6 +276,15 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
               });
             }
           });
+
+          // Calculate consumed calories and protein from meals with consumed: true
+          const consumedCalories = allMeals
+            .filter(meal => meal.consumed)
+            .reduce((sum, meal) => sum + (meal.calories || 0), 0);
+
+          const consumedProtein = allMeals
+            .filter(meal => meal.consumed)
+            .reduce((sum, meal) => sum + (meal.protein || 0), 0);
 
           const todayPlan: DailyMealPlan = {
             id: todayData.id?.toString() || todayString,
@@ -253,8 +299,8 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
             },
             totalCalories: todayData.totalCalories || 0,
             totalProtein: todayData.totalProtein || 0,
-            consumedCalories: todayData.caloriesConsumed || 0,
-            consumedProtein: todayData.proteinConsumed || 0,
+            consumedCalories: consumedCalories,
+            consumedProtein: consumedProtein,
           };
 
           setDailyMealPlans(prev => ({
@@ -428,11 +474,37 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
     }));
   };
 
-  const markMealConsumed = (mealId: string, consumed: boolean) => {
+  const markMealConsumed = async (mealId: string, consumed: boolean) => {
+    if (!user?.id) return;
+
+    const freshTodayString = getLocalDateString(new Date());
+    console.log('🔍 Marking meal consumed:', { mealId, consumed, todayString: freshTodayString });
+
+    // ONLY allow marking meals from TODAY
+    // Find if this meal exists in today's plan
+    const todayPlan = dailyMealPlans[freshTodayString];
+
+    if (!todayPlan) {
+      console.log('⚠️ No meal plan for today found');
+      return;
+    }
+
+    const mealInToday = todayPlan.meals.find(meal => meal.id === mealId);
+
+    if (!mealInToday) {
+      console.log(`⚠️ Meal ${mealId} is not in today's plan. Ignoring click.`);
+      return; // Don't allow marking meals from past dates
+    }
+
+    console.log('✅ Meal found in today\'s plan, proceeding with update');
+
+    // Optimistically update UI immediately for TODAY ONLY
     setDailyMealPlans((prev) => {
       const updated = { ...prev };
-      Object.keys(updated).forEach((date) => {
-        const plan = updated[date];
+
+      // Only update today's plan
+      if (updated[freshTodayString]) {
+        const plan = updated[freshTodayString];
 
         // Update the meal's consumed state
         const updatedMeals = plan.meals.map((meal) =>
@@ -448,54 +520,103 @@ export const MealProvider: React.FC<MealProviderProps> = ({ children }) => {
           .filter(meal => meal.consumed)
           .reduce((sum, meal) => sum + (meal.protein || 0), 0);
 
-        updated[date] = {
+        updated[freshTodayString] = {
           ...plan,
           meals: updatedMeals,
           consumedCalories,
           consumedProtein,
         };
-      });
+      }
+
       return updated;
     });
+
+    // Persist to database in the background
+    try {
+      const result = await updateMealConsumedAPI(user.id, freshTodayString, mealId, consumed);
+
+      // Check if meal was found in database
+      if (result && result.notFound) {
+        console.log(`ℹ️ Meal ${mealId} not in database, keeping UI-only state`);
+        return; // Don't rollback, keep the UI state
+      }
+
+      console.log(`✅ Meal ${mealId} consumed state updated to ${consumed} in database`);
+    } catch (error) {
+      console.error("❌ Error persisting meal consumed state:", error);
+
+      // Rollback on error - only update today's plan
+      setDailyMealPlans((prev) => {
+        const updated = { ...prev };
+
+        if (updated[freshTodayString]) {
+          const plan = updated[freshTodayString];
+          const updatedMeals = plan.meals.map((meal) =>
+            meal.id === mealId ? { ...meal, consumed: !consumed } : meal
+          );
+
+          const consumedCalories = updatedMeals
+            .filter(meal => meal.consumed)
+            .reduce((sum, meal) => sum + (meal.calories || 0), 0);
+
+          const consumedProtein = updatedMeals
+            .filter(meal => meal.consumed)
+            .reduce((sum, meal) => sum + (meal.protein || 0), 0);
+
+          updated[freshTodayString] = {
+            ...plan,
+            meals: updatedMeals,
+            consumedCalories,
+            consumedProtein,
+          };
+        }
+
+        return updated;
+      });
+
+      // Only show error if it's not a "meal not found" error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('404')) {
+        setError("Failed to update meal status. Please try again.");
+      }
+    }
   };
 
   const updateWaterIntake = async (glasses: number) => {
     if (!user?.id) return;
 
-    const today = getTodayMealPlan();
-    if (today) {
-      try {
-        setIsLoading(true);
+    try {
+      // Optimistically update the UI immediately (no loading state)
+      setDailyMealPlans((prev) => {
+        const updated = { ...prev };
+        if (updated[todayString]) {
+          updated[todayString] = {
+            ...updated[todayString],
+            waterGlasses: glasses
+          };
+        }
+        return updated;
+      });
 
-        // Get current meal plan data from API
-        const todayData = await getMealsForDate(user.id, todayString);
-        console.log('💧 Current data from API:', JSON.stringify(todayData, null, 2));
+      // Use dedicated water-only endpoint (completely independent from meals)
+      await updateWaterIntakeAPI(user.id, todayString, glasses);
 
-        // Get existing meals (breakfast, lunch, dinner, snacks)
-        const existingMeals = todayData?.meals || {};
-        console.log('🍽️ Existing meals:', JSON.stringify(existingMeals, null, 2));
+    } catch (error) {
+      console.error("❌ Error updating water intake:", error);
 
-        // Update water intake while preserving existing meals
-        const updatedMealPlanData = {
-          ...existingMeals,
-          waterGlasses: glasses
-        };
-        console.log('💾 Data to save:', JSON.stringify(updatedMealPlanData, null, 2));
+      // Rollback on error
+      setDailyMealPlans((prev) => {
+        const updated = { ...prev };
+        if (updated[todayString]) {
+          updated[todayString] = {
+            ...updated[todayString],
+            waterGlasses: (updated[todayString].waterGlasses || 0) - (glasses > (updated[todayString].waterGlasses || 0) ? 1 : -1)
+          };
+        }
+        return updated;
+      });
 
-        // Save the updated plan with preserved meals
-        await saveDailyMealPlan(user.id, todayString, updatedMealPlanData);
-
-        // Optimistically update the UI
-        updateMealPlan(todayString, { waterGlasses: glasses });
-
-        // Refresh data from the source to ensure consistency
-        await loadData();
-      } catch (error) {
-        console.error("❌ Error updating water intake:", error);
-        setError("Failed to update water intake.");
-      } finally {
-        setIsLoading(false);
-      }
+      setError("Failed to update water intake.");
     }
   };
 

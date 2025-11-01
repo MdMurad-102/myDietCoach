@@ -1,12 +1,14 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { useMealContext } from '@/context/UnifiedMealContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Progress from 'react-native-progress';
-import { useMealContext } from '@/context/UnifiedMealContext';
 
 export default function SimpleWaterTracker() {
   const { currentDayPlan, updateWaterIntake } = useMealContext();
+  const { colors, isDarkMode } = useTheme();
   const waterConsumed = currentDayPlan?.waterGlasses || 0;
   const waterGoal = currentDayPlan?.goals.water || 8;
   const progress = waterGoal > 0 ? waterConsumed / waterGoal : 0;
@@ -24,10 +26,13 @@ export default function SimpleWaterTracker() {
   };
 
   return (
-    <LinearGradient colors={['#E0F7FA', '#B2EBF2']} style={styles.container}>
+    <LinearGradient
+      colors={isDarkMode ? [colors.surface, colors.card] : ['#E0F7FA', '#B2EBF2']}
+      style={styles.container}
+    >
       <View style={styles.header}>
         <Ionicons name="water-outline" size={26} color="#00796B" />
-        <Text style={styles.title}>Water Intake</Text>
+        <Text style={[styles.title, { color: isDarkMode ? colors.text : '#004D40' }]}>Water Intake</Text>
       </View>
 
       <View style={styles.tracker}>
@@ -47,8 +52,8 @@ export default function SimpleWaterTracker() {
             strokeCap="round"
           />
           <View style={styles.progressTextContainer}>
-            <Text style={styles.waterConsumedText}>{waterConsumed}</Text>
-            <Text style={styles.waterGoalText}>/ {waterGoal} glasses</Text>
+            <Text style={[styles.waterConsumedText, { color: colors.text }]}>{waterConsumed}</Text>
+            <Text style={[styles.waterGoalText, { color: colors.textSecondary }]}>/ {waterGoal} glasses</Text>
           </View>
         </View>
 

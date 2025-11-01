@@ -1,22 +1,101 @@
+import { useTheme } from '@/context/ThemeContext';
 import { useMealContext } from '@/context/UnifiedMealContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Progress from 'react-native-progress';
 
+// Default daily tasks to help users achieve their goals
+const DEFAULT_DAILY_TASKS = [
+    {
+        id: 'drink-water',
+        text: 'Drink 8 glasses of water',
+        icon: 'water-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'eat-breakfast',
+        text: 'Eat a healthy breakfast',
+        icon: 'sunny-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'log-meals',
+        text: 'Log all meals for today',
+        icon: 'restaurant-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'exercise',
+        text: 'Exercise for 30 minutes',
+        icon: 'fitness-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'avoid-junk',
+        text: 'Avoid junk food',
+        icon: 'fast-food-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'sleep-early',
+        text: 'Get 7-8 hours of sleep',
+        icon: 'moon-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'track-weight',
+        text: 'Track your weight/progress',
+        icon: 'trending-up-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    },
+    {
+        id: 'meal-prep',
+        text: 'Prepare healthy meals',
+        icon: 'nutrition-outline' as keyof typeof Ionicons.glyphMap,
+        completed: false
+    }
+];
+
 const DailyTasks = () => {
     const { currentDayPlan, toggleDailyTask } = useMealContext();
-    const tasks = currentDayPlan?.tasks || [];
+    const { colors } = useTheme();
+
+    // Local state for default tasks
+    const [localTasks, setLocalTasks] = useState(DEFAULT_DAILY_TASKS);
+
+    // Use context tasks if available, otherwise use local state tasks
+    const tasks = useMemo(() => {
+        const contextTasks = currentDayPlan?.tasks || [];
+        return contextTasks.length > 0 ? contextTasks : localTasks;
+    }, [currentDayPlan?.tasks, localTasks]);
 
     const completedCount = tasks.filter(task => task.completed).length;
     const progress = tasks.length > 0 ? completedCount / tasks.length : 0;
 
+    // Handle task toggle
+    const handleToggleTask = (taskId: string) => {
+        const contextTasks = currentDayPlan?.tasks || [];
+
+        if (contextTasks.length > 0) {
+            // If using context tasks, use the context toggle function
+            toggleDailyTask(taskId);
+        } else {
+            // If using local default tasks, update local state
+            setLocalTasks(prevTasks =>
+                prevTasks.map(task =>
+                    task.id === taskId ? { ...task, completed: !task.completed } : task
+                )
+            );
+        }
+    };
+
     const renderTaskItem = (item: { id: string; text: string; completed: boolean; icon?: keyof typeof Ionicons.glyphMap }) => (
         <TouchableOpacity
             key={item.id}
-            style={styles.taskItem}
-            onPress={() => toggleDailyTask(item.id)}
+            style={[styles.taskItem, { backgroundColor: colors.card }]}
+            onPress={() => handleToggleTask(item.id)}
             activeOpacity={0.7}
         >
             <View style={styles.taskContent}>
@@ -26,10 +105,10 @@ const DailyTasks = () => {
                 <Ionicons
                     name={item.icon as any || 'list-outline'}
                     size={24}
-                    color={item.completed ? '#999' : '#555'}
+                    color={item.completed ? '#999' : colors.text}
                     style={styles.taskIcon}
                 />
-                <Text style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}>
+                <Text style={[styles.taskTitle, { color: colors.text }, item.completed && styles.taskTitleCompleted]}>
                     {item.text}
                 </Text>
             </View>
@@ -58,14 +137,7 @@ const DailyTasks = () => {
             </View>
 
             <View style={styles.taskList}>
-                {tasks.length > 0 ? (
-                    tasks.map(task => renderTaskItem(task))
-                ) : (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="file-tray-outline" size={40} color="#ccc" />
-                        <Text style={styles.emptyText}>No tasks for today.</Text>
-                    </View>
-                )}
+                {tasks.map(task => renderTaskItem(task))}
             </View>
         </LinearGradient>
     );
@@ -142,15 +214,6 @@ const styles = StyleSheet.create({
     },
     taskTitleCompleted: {
         textDecorationLine: 'line-through',
-        color: '#999',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    emptyText: {
-        marginTop: 10,
-        fontSize: 16,
         color: '#999',
     },
 });

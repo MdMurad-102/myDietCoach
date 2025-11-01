@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -12,6 +13,7 @@ import {
 
 export default function QuickActions() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const quickActionItems = [
     {
@@ -20,6 +22,13 @@ export default function QuickActions() {
       icon: "sparkles",
       colors: ["#FF6B6B", "#FF8E53"],
       onPress: () => router.push("/recipeGenerator"),
+    },
+    {
+      id: "daily-plan",
+      title: "Daily Plan",
+      icon: "calendar",
+      colors: ["#667eea", "#764ba2"],
+      onPress: () => router.push("/dailyMealPlan"),
     },
     {
       id: "meals",
@@ -35,20 +44,13 @@ export default function QuickActions() {
       colors: ["#8E44AD", "#9B59B6"],
       onPress: () => router.push("/Progress"),
     },
-    {
-      id: "ai-chat",
-      title: "AI Assistant",
-      icon: "chatbubbles",
-      colors: ["#667eea", "#764ba2"],
-      onPress: () => router.push("/AIChat"),
-    },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.cardHeader}>
         <Ionicons name="flash" size={24} color="#667eea" />
-        <Text style={styles.title}>Quick Actions</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Quick Actions</Text>
       </View>
       <ScrollView
         horizontal

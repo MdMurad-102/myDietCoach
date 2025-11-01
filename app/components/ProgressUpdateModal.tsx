@@ -1,57 +1,96 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TextInput,
-  Alert,
-  ScrollView,
-  Platform,
-  TouchableOpacity,
-} from 'react-native';
+import { UserContext } from '@/context/UserContext';
+import { logWeight } from '@/service/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMealContext } from '@/context/UnifiedMealContext';
-import Button from './Button'; // Import the new Button component
+import React, { useContext, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Button from './Button';
 
 interface ProgressUpdateModalProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
   visible,
   onClose,
+  onSuccess,
 }) => {
-  const { getTodayMealPlan, updateCurrentProgress } = useMealContext();
-  const todayPlan = getTodayMealPlan();
+  const context = useContext(UserContext);
+  const user = context?.user;
 
-  const [steps, setSteps] = useState('0');
-  const [workoutMinutes, setWorkoutMinutes] = useState('0');
-  const [calories, setCalories] = useState('0');
-  const [protein, setProtein] = useState('0');
+  const [weight, setWeight] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible && todayPlan) {
-      setCalories((todayPlan.consumedCalories || 0).toString());
-      setProtein((todayPlan.consumedProtein || 0).toString());
+    if (visible && user?.weight) {
+      setWeight(user.weight.toString());
     }
-  }, [visible, todayPlan]);
+  }, [visible, user]);
 
-  const handleSave = () => {
-    updateCurrentProgress(parseInt(calories) || 0, parseInt(protein) || 0);
-    Alert.alert('Success', 'Progress updated successfully!');
-    onClose();
+  const handleSave = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
+
+    const weightValue = parseFloat(weight);
+    if (!weightValue || weightValue <= 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid weight');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await logWeight(user.id, weightValue, today, notes);
+
+      Alert.alert('Success', 'Weight logged successfully! 🎉');
+
+      // Call onSuccess callback to refresh data
+      onSuccess?.();
+
+      // Reset and close
+      setNotes('');
+      onClose();
+    } catch (error) {
+      console.error('Error logging weight:', error);
+      Alert.alert('Error', 'Failed to log weight. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
-    setSteps('0');
-    setWorkoutMinutes('0');
-    if (todayPlan) {
-      setCalories((todayPlan.consumedCalories || 0).toString());
-      setProtein((todayPlan.consumedProtein || 0).toString());
+    if (user?.weight) {
+      setWeight(user.weight.toString());
     }
+    setNotes('');
+  };
+
+  const calculateBMI = () => {
+    const weightValue = parseFloat(weight);
+    const heightValue = parseFloat(user?.height || '0');
+
+    if (weightValue && heightValue) {
+      const bmi = weightValue / Math.pow(heightValue / 100, 2);
+      return bmi.toFixed(1);
+    }
+    return '0.0';
   };
 
   return (
@@ -63,89 +102,86 @@ const ProgressUpdateModal: React.FC<ProgressUpdateModalProps> = ({
     >
       <View style={styles.container}>
         <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>Update Your Progress</Text>
+            <Text style={styles.title}>Log Your Weight</Text>
             <Text style={styles.subtitle}>
-              Track your daily achievements! 🎯
+              Track your weight journey! ⚖️
             </Text>
           </View>
-          <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleReset}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Ionicons name="refresh" size={24} color="#fff" />
           </TouchableOpacity>
         </LinearGradient>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.description}>
-            Update your daily progress to keep track of your health journey! 💪
+            Log your current weight to track your progress over time! 💪
           </Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>🚶‍♂️ Steps Today</Text>
+            <Text style={styles.inputLabel}>⚖️ Current Weight (kg)</Text>
             <TextInput
               style={styles.input}
-              value={steps}
-              onChangeText={setSteps}
-              placeholder="e.g., 8500"
+              value={weight}
+              onChangeText={setWeight}
+              placeholder="e.g., 65.5"
               placeholderTextColor="#999"
-              keyboardType="number-pad"
+              keyboardType="decimal-pad"
             />
-            <Text style={styles.goalText}>Goal: 10,000 steps daily</Text>
+            <Text style={styles.goalText}>Enter your weight in kilograms</Text>
+          </View>
+
+          <View style={styles.bmiCard}>
+            <Text style={styles.bmiLabel}>Estimated BMI</Text>
+            <Text style={styles.bmiValue}>{calculateBMI()}</Text>
+            <Text style={styles.bmiInfo}>
+              {user?.height ? `Based on height: ${user.height} cm` : 'Update height in profile'}
+            </Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>🏋️‍♂️ Workout Time (minutes)</Text>
+            <Text style={styles.inputLabel}>� Notes (Optional)</Text>
             <TextInput
-              style={styles.input}
-              value={workoutMinutes}
-              onChangeText={setWorkoutMinutes}
-              placeholder="e.g., 30"
+              style={[styles.input, styles.textArea]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Add any notes about your progress..."
               placeholderTextColor="#999"
-              keyboardType="number-pad"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
             />
-            <Text style={styles.goalText}>Recommended: 30+ minutes daily</Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>🔥 Calories Consumed</Text>
-            <TextInput
-              style={styles.input}
-              value={calories}
-              onChangeText={setCalories}
-              placeholder="e.g., 1800"
-              placeholderTextColor="#999"
-              keyboardType="number-pad"
-            />
-            <Text style={styles.goalText}>Your daily goal: 2000 calories</Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>💪 Protein Intake (grams)</Text>
-            <TextInput
-              style={styles.input}
-              value={protein}
-              onChangeText={setProtein}
-              placeholder="e.g., 120"
-              placeholderTextColor="#999"
-              keyboardType="number-pad"
-            />
-            <Text style={styles.goalText}>Your daily goal: 120g protein</Text>
           </View>
 
           <Button
-            title="Save My Progress"
+            title={loading ? 'Saving...' : 'Log Weight'}
             onPress={handleSave}
             variant="primary"
             icon="checkmark-circle-outline"
+            disabled={loading}
             style={{ marginTop: 20, marginBottom: 20 }}
           />
 
+          {loading && (
+            <ActivityIndicator size="large" color="#667eea" style={{ marginBottom: 20 }} />
+          )}
+
           <View style={styles.encouragementBox}>
             <Text style={styles.encouragementText}>
-              🌟 Great job tracking your progress! Every small step counts
-              towards your health goals! 🌟
+              🌟 Consistency is key! Log your weight regularly to see your progress! 🌟
             </Text>
           </View>
         </ScrollView>
@@ -182,6 +218,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    elevation: 5,
   },
   resetButton: {
     position: 'absolute',
@@ -193,6 +231,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    elevation: 5,
   },
   title: {
     fontSize: 24,
@@ -245,6 +285,36 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontStyle: 'italic',
     textAlign: 'right',
+  },
+  bmiCard: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 25,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#4CAF50',
+  },
+  bmiLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  bmiValue: {
+    fontSize: 36,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  bmiInfo: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  textArea: {
+    height: 80,
+    paddingTop: 12,
   },
   encouragementBox: {
     backgroundColor: 'rgba(102, 126, 234, 0.1)',

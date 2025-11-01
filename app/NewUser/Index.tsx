@@ -319,13 +319,13 @@ export default function Index() {
 
         <View style={styles.row}>
           <Input
-            placeholder="e.g. India"
+            placeholder="e.g. Bangladesh"
             label="Country"
             value={country}
             onChangeText={setCountry}
           />
           <Input
-            placeholder="e.g. Mumbai"
+            placeholder="e.g. Rajshahi"
             label="City"
             value={city}
             onChangeText={setCity}

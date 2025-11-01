@@ -475,6 +475,48 @@ export async function saveDailyMealPlan(userId: number, date: string, meals: {
 }
 
 /**
+ * Update water intake for a specific date
+ * This is an independent operation that only updates water, not meals
+ */
+export async function updateWaterIntakeAPI(userId: number, date: string, waterGlasses: number): Promise<any> {
+    try {
+        const response = await api.patch('/meals/water-intake', {
+            userId,
+            date,
+            waterGlasses
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating water intake:', error);
+        throw new Error('Failed to update water intake');
+    }
+}
+
+/**
+ * Update meal consumed state (mark meal as eaten or not eaten)
+ * This persists the consumed state to the database
+ */
+export async function updateMealConsumedAPI(userId: number, date: string, mealId: string, consumed: boolean): Promise<any> {
+    try {
+        const response = await api.patch('/meals/consumed', {
+            userId,
+            date,
+            mealId,
+            consumed
+        });
+        return response.data;
+    } catch (error: any) {
+        // If meal not found (404), return a flag instead of throwing
+        if (error.response?.status === 404) {
+            console.log(`ℹ️ Meal ${mealId} not found in database for ${date}`);
+            return { success: false, notFound: true };
+        }
+        console.error('Error updating meal consumed state:', error);
+        throw new Error('Failed to update meal consumed state');
+    }
+}
+
+/**
  * Add a single meal to a specific meal type
  */
 export async function addMealToDate(userId: number, date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks', meal: any): Promise<any> {
@@ -857,6 +899,77 @@ export async function markMealConsumedInDailyPlan(
     } catch (error) {
         console.error('Error marking meal consumed:', error);
         throw new Error('Failed to mark meal consumed');
+    }
+}
+
+// ============================================
+// WEIGHT TRACKING API
+// ============================================
+
+export interface WeightLog {
+    id: number;
+    user_id: number;
+    weight: number;
+    bmi: number | null;
+    log_date: string;
+    notes?: string;
+    created_at: string;
+}
+
+/**
+ * Log weight progress
+ */
+export async function logWeight(
+    userId: number,
+    weight: number,
+    date: string,
+    notes?: string
+): Promise<WeightLog> {
+    try {
+        const response = await api.post('/progress/weight', {
+            userId,
+            weight,
+            date,
+            notes
+        });
+        return (response.data as any).log;
+    } catch (error) {
+        console.error('Error logging weight:', error);
+        throw new Error('Failed to log weight');
+    }
+}
+
+/**
+ * Get weight history
+ */
+export async function getWeightHistory(
+    userId: number,
+    startDate?: string,
+    endDate?: string
+): Promise<WeightLog[]> {
+    try {
+        const params: any = {};
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+
+        const response = await api.get(`/progress/weight/${userId}`, { params });
+        return (response.data as any).logs || [];
+    } catch (error) {
+        console.error('Error fetching weight history:', error);
+        throw new Error('Failed to fetch weight history');
+    }
+}
+
+/**
+ * Get latest weight log
+ */
+export async function getLatestWeight(userId: number): Promise<WeightLog | null> {
+    try {
+        const response = await api.get(`/progress/weight/${userId}/latest`);
+        return (response.data as any).log || null;
+    } catch (error) {
+        console.error('Error fetching latest weight:', error);
+        throw new Error('Failed to fetch latest weight');
     }
 }
 

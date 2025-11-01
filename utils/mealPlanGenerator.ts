@@ -1,13 +1,80 @@
 // Bangladesh Daily Meal Plan Generator
 // Smart random selection with calorie balancing and repetition avoidance
+// NOW USES EXPANDED bangladeshiFoods.json DATABASE
 
-import {
-    BangladeshMeal,
-    breakfastMeals,
-    lunchMeals,
-    dinnerMeals,
-    snackMeals,
-} from './bangladeshMealDatabase';
+import { FoodItem, getFoodsByMealType } from './foodDatabase';
+
+// Convert FoodItem to BangladeshMeal format for compatibility
+interface BangladeshMeal {
+    id: string;
+    name: string;           // Bangla name
+    nameEn: string;        // English name
+    category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber?: number;
+    ingredients: string[];
+    description: string;
+    prepTime: string;
+    servings: number;
+    isVegetarian: boolean;
+    isVegan: boolean;
+    tags: string[];
+    portionSize?: string;
+    healthTips?: string;
+}
+
+// Convert FoodItem from JSON to BangladeshMeal
+function convertFoodItemToMeal(food: FoodItem, index: number, category: 'breakfast' | 'lunch' | 'dinner' | 'snack'): BangladeshMeal {
+    const prefix = category === 'breakfast' ? 'bf' : category === 'lunch' ? 'ln' : category === 'dinner' ? 'dn' : 'sn';
+
+    // Check if vegetarian by checking for meat/fish/egg keywords
+    const nonVegKeywords = ['chicken', 'beef', 'fish', 'egg', 'meat', 'mutton', 'prawn', 'shrimp', 'hilsa'];
+    const nameAndDesc = (food.name + ' ' + food.description).toLowerCase();
+    const isVegetarian = !nonVegKeywords.some(keyword => nameAndDesc.includes(keyword));
+
+    // Check if vegan (no dairy, eggs, or meat)
+    const nonVeganKeywords = [...nonVegKeywords, 'milk', 'yogurt', 'cheese', 'paneer', 'ghee', 'butter'];
+    const isVegan = !nonVeganKeywords.some(keyword => nameAndDesc.includes(keyword));
+
+    return {
+        id: `${prefix}${String(index + 1).padStart(3, '0')}`,
+        name: food.banglaName,
+        nameEn: food.name,
+        category: category,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        fiber: food.fiber,
+        ingredients: [food.description], // Use description as ingredient summary
+        description: food.description,
+        prepTime: '20-30 minutes', // Default prep time
+        servings: 1,
+        isVegetarian: isVegetarian,
+        isVegan: isVegan,
+        tags: ['from-database', food.fiber >= 5 ? 'high-fiber' : '', food.protein >= 20 ? 'high-protein' : ''].filter(Boolean),
+        portionSize: food.portionSize,
+        healthTips: food.healthTips,
+    };
+}
+
+// Load meals dynamically from bangladeshiFoods.json
+function loadMealsFromJSON() {
+    const breakfastFoods = getFoodsByMealType('breakfast');
+    const lunchFoods = getFoodsByMealType('lunch');
+    const dinnerFoods = getFoodsByMealType('dinner');
+    const snackFoods = getFoodsByMealType('snack');
+
+    return {
+        breakfastMeals: breakfastFoods.map((food, idx) => convertFoodItemToMeal(food, idx, 'breakfast')),
+        lunchMeals: lunchFoods.map((food, idx) => convertFoodItemToMeal(food, idx, 'lunch')),
+        dinnerMeals: dinnerFoods.map((food, idx) => convertFoodItemToMeal(food, idx, 'dinner')),
+        snackMeals: snackFoods.map((food, idx) => convertFoodItemToMeal(food, idx, 'snack')),
+    };
+}
 
 export interface DailyMealPlan {
     breakfast: BangladeshMeal;
@@ -32,6 +99,7 @@ export interface MealPlanOptions {
 
 /**
  * Generate a complete daily meal plan with smart random selection
+ * NOW USES EXPANDED bangladeshiFoods.json (88 items)
  */
 export const generateDailyMealPlan = (options: MealPlanOptions = {}): DailyMealPlan => {
     const {
@@ -42,6 +110,16 @@ export const generateDailyMealPlan = (options: MealPlanOptions = {}): DailyMealP
         highProtein = false,
         quickMeals = false,
     } = options;
+
+    // Load meals dynamically from expanded bangladeshiFoods.json
+    const { breakfastMeals, lunchMeals, dinnerMeals, snackMeals } = loadMealsFromJSON();
+
+    console.log('🍽️ Loaded meals from bangladeshiFoods.json:');
+    console.log(`  Breakfast: ${breakfastMeals.length} options`);
+    console.log(`  Lunch: ${lunchMeals.length} options`);
+    console.log(`  Dinner: ${dinnerMeals.length} options`);
+    console.log(`  Snacks: ${snackMeals.length} options`);
+    console.log(`  Total: ${breakfastMeals.length + lunchMeals.length + dinnerMeals.length + snackMeals.length} meals available`);
 
     // Calculate calorie targets for each meal
     // Breakfast: 25%, Lunch: 35%, Dinner: 30%, Snack: 10%
@@ -107,30 +185,46 @@ export const generateDailyMealPlan = (options: MealPlanOptions = {}): DailyMealP
         );
 
         if (closeMatches.length > 0) {
-            // Select randomly from close matches
-            return closeMatches[Math.floor(Math.random() * closeMatches.length)];
+            // FIXED: Select randomly from close matches
+            const randomIndex = Math.floor(Math.random() * closeMatches.length);
+            console.log(`  Selected ${closeMatches[randomIndex].nameEn} from ${closeMatches.length} close matches (target: ${targetCal} cal)`);
+            return closeMatches[randomIndex];
         }
 
-        // If no close matches, select the closest one
-        let closest = filteredMeals[0];
+        // IMPROVED: If no close matches, find ALL meals with minimum difference and pick randomly
         let minDiff = Math.abs(filteredMeals[0].calories - targetCal);
 
+        // First pass: find minimum difference
         for (const meal of filteredMeals) {
             const diff = Math.abs(meal.calories - targetCal);
             if (diff < minDiff) {
                 minDiff = diff;
-                closest = meal;
             }
         }
 
-        return closest;
+        // Second pass: collect all meals with that minimum difference
+        const closestMeals = filteredMeals.filter(
+            meal => Math.abs(meal.calories - targetCal) === minDiff
+        );
+
+        // Randomly select from closest meals
+        const randomIndex = Math.floor(Math.random() * closestMeals.length);
+        console.log(`  Selected ${closestMeals[randomIndex].nameEn} from ${closestMeals.length} closest meals (diff: ${minDiff} cal)`);
+        return closestMeals[randomIndex];
     };
 
-    // Select meals for each category
-    const breakfast = selectMeal(breakfastMeals, calorieTargets.breakfast);
-    const lunch = selectMeal(lunchMeals, calorieTargets.lunch);
-    const dinner = selectMeal(dinnerMeals, calorieTargets.dinner);
-    const snack = selectMeal(snackMeals, calorieTargets.snack);
+    // Select meals for each category with wider tolerance for more variety
+    console.log('🎲 Selecting meals randomly...');
+    const breakfast = selectMeal(breakfastMeals, calorieTargets.breakfast, 200); // Wider tolerance = more variety
+    const lunch = selectMeal(lunchMeals, calorieTargets.lunch, 200);
+    const dinner = selectMeal(dinnerMeals, calorieTargets.dinner, 200);
+    const snack = selectMeal(snackMeals, calorieTargets.snack, 150);
+
+    console.log('\n✅ Generated Meal Plan:');
+    console.log(`  Breakfast: ${breakfast.nameEn} (${breakfast.calories} cal, ${breakfast.protein}g protein)`);
+    console.log(`  Lunch: ${lunch.nameEn} (${lunch.calories} cal, ${lunch.protein}g protein)`);
+    console.log(`  Dinner: ${dinner.nameEn} (${dinner.calories} cal, ${dinner.protein}g protein)`);
+    console.log(`  Snack: ${snack.nameEn} (${snack.calories} cal, ${snack.protein}g protein)`);
 
     // Calculate totals
     const totalCalories = breakfast.calories + lunch.calories + dinner.calories + snack.calories;
@@ -170,6 +264,9 @@ export const regenerateMeal = (
         highProtein = false,
         quickMeals = false,
     } = options;
+
+    // Load meals dynamically from expanded bangladeshiFoods.json
+    const { breakfastMeals, lunchMeals, dinnerMeals, snackMeals } = loadMealsFromJSON();
 
     // Get current meal IDs to avoid repetition
     const currentMealIds = [
@@ -222,27 +319,46 @@ export const regenerateMeal = (
         return filtered;
     };
 
-    // Select new meal
+    // Select new meal with improved randomization
     const selectMeal = (
         meals: BangladeshMeal[],
         targetCal: number,
-        tolerance: number = 150
+        tolerance: number = 200 // Wider tolerance for more variety
     ): BangladeshMeal => {
         const filteredMeals = filterMeals(meals);
 
         if (filteredMeals.length === 0) {
+            console.log('⚠️ No meals after filtering, using random from all meals');
             return meals[Math.floor(Math.random() * meals.length)];
         }
 
+        // Find meals within calorie tolerance
         const closeMatches = filteredMeals.filter(
             meal => Math.abs(meal.calories - targetCal) <= tolerance
         );
 
         if (closeMatches.length > 0) {
-            return closeMatches[Math.floor(Math.random() * closeMatches.length)];
+            const selected = closeMatches[Math.floor(Math.random() * closeMatches.length)];
+            console.log(`🔄 Regenerated: ${selected.nameEn} from ${closeMatches.length} options`);
+            return selected;
         }
 
-        return filteredMeals[Math.floor(Math.random() * filteredMeals.length)];
+        // If no close matches, find all meals with minimum difference
+        let minDiff = Math.abs(filteredMeals[0].calories - targetCal);
+        for (const meal of filteredMeals) {
+            const diff = Math.abs(meal.calories - targetCal);
+            if (diff < minDiff) {
+                minDiff = diff;
+            }
+        }
+
+        const closestMeals = filteredMeals.filter(
+            meal => Math.abs(meal.calories - targetCal) === minDiff
+        );
+
+        const selected = closestMeals[Math.floor(Math.random() * closestMeals.length)];
+        console.log(`🔄 Regenerated: ${selected.nameEn} from ${closestMeals.length} closest options`);
+        return selected;
     };
 
     // Generate new meal

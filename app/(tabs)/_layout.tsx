@@ -1,6 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { View } from "react-native";
 
 export default function TabLayout() {
   return (
@@ -54,12 +53,27 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="AIChat"
+        options={{
+          tabBarLabel: "AI Nutritionist",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="Profile"
         options={{
           tabBarLabel: "Profile",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="Meals_BACKUP"
+        options={{
+          href: null, // Hide from tabs
         }}
       />
     </Tabs>

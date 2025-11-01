@@ -86,7 +86,7 @@ export default function SignIn() {
           style={styles.icon}
         />
         <TextInput
-          placeholder="email"
+          placeholder="Email"
           style={styles.input}
           value={email}
           onChangeText={setemail}

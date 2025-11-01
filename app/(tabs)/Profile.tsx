@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { UserContext } from "@/context/UserContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -6,6 +7,7 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -16,6 +18,7 @@ import ProfileHeader from "../components/ProfileHeader";
 
 export default function Profile() {
   const context = useContext(UserContext);
+  const { isDarkMode, colors, toggleTheme } = useTheme();
   const router = useRouter();
 
   if (!context) {
@@ -40,11 +43,11 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.notLoggedInContainer}>
           <Ionicons name="person-circle-outline" size={100} color="#ccc" />
-          <Text style={styles.notLoggedInTitle}>Welcome!</Text>
-          <Text style={styles.notLoggedInSubtitle}>
+          <Text style={[styles.notLoggedInTitle, { color: colors.text }]}>Welcome!</Text>
+          <Text style={[styles.notLoggedInSubtitle, { color: colors.textSecondary }]}>
             Login or create an account to manage your profile.
           </Text>
           <Button
@@ -66,12 +69,6 @@ export default function Profile() {
       color: "#3498db",
     },
     {
-      title: "AI Nutritionist",
-      icon: "chatbubbles-outline",
-      screen: "/AIChat",
-      color: "#9b59b6",
-    },
-    {
       title: "Settings",
       icon: "settings-outline",
       screen: "/settings",
@@ -86,11 +83,11 @@ export default function Profile() {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       <ProfileHeader user={user} />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Stats</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Stats</Text>
         <View style={styles.statsGrid}>
           <StatCard
             icon="scale-outline"
@@ -98,6 +95,7 @@ export default function Profile() {
             value={user.weight || "N/A"}
             unit="kg"
             color="#2ecc71"
+            colors={colors}
           />
           <StatCard
             icon="resize-outline"
@@ -105,6 +103,7 @@ export default function Profile() {
             value={user.height || "N/A"}
             unit="cm"
             color="#3498db"
+            colors={colors}
           />
           <StatCard
             icon="body-outline"
@@ -112,12 +111,14 @@ export default function Profile() {
             value={user.age || "N/A"}
             unit="yrs"
             color="#9b59b6"
+            colors={colors}
           />
           <StatCard
             icon="male-female-outline"
             label="Gender"
             value={user.gender || "N/A"}
             color="#e91e63"
+            colors={colors}
           />
         </View>
       </View>
@@ -126,12 +127,31 @@ export default function Profile() {
         <MealTimeSettings />
       </View>
 
+      {/* Preferences Section with Dark Mode Toggle */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Menu</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
+        <View style={[styles.preferenceItem, { backgroundColor: colors.card }]}>
+          <View style={styles.preferenceLeft}>
+            <View style={[styles.preferenceIcon, { backgroundColor: '#9b59b620' }]}>
+              <Ionicons name="moon-outline" size={22} color="#9b59b6" />
+            </View>
+            <Text style={[styles.preferenceText, { color: colors.text }]}>Dark Mode</Text>
+          </View>
+          <Switch
+            value={isDarkMode}
+            onValueChange={toggleTheme}
+            trackColor={{ false: '#d1d5db', true: '#9b59b6' }}
+            thumbColor={isDarkMode ? '#667eea' : '#f4f3f4'}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Menu</Text>
         {menuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: colors.card }]}
             onPress={() => router.push(item.screen as any)}
           >
             <View
@@ -142,8 +162,8 @@ export default function Profile() {
             >
               <Ionicons name={item.icon as any} size={22} color={item.color} />
             </View>
-            <Text style={styles.menuItemText}>{item.title}</Text>
-            <Ionicons name="chevron-forward" size={22} color="#ccc" />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>{item.title}</Text>
+            <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         ))}
       </View>
@@ -160,11 +180,11 @@ export default function Profile() {
   );
 }
 
-const StatCard = ({ icon, label, value, unit, color }: any) => (
-  <View style={styles.statCard}>
+const StatCard = ({ icon, label, value, unit, color, colors }: any) => (
+  <View style={[styles.statCard, { backgroundColor: colors.card }]}>
     <Ionicons name={icon} size={28} color={color} />
-    <Text style={styles.statLabel}>{label}</Text>
-    <Text style={styles.statValue}>
+    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
+    <Text style={[styles.statValue, { color: colors.text }]}>
       {value} {unit}
     </Text>
   </View>
@@ -261,4 +281,32 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 40,
   },
+  preferenceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  preferenceLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  preferenceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  preferenceText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
 });
+

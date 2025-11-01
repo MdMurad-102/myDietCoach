@@ -368,6 +368,151 @@ app.post('/api/meals/daily-plan', async (req, res) => {
     }
 });
 
+// Dedicated endpoint for water intake updates (independent from meals)
+app.patch('/api/meals/water-intake', async (req, res) => {
+    const { userId, date, waterGlasses } = req.body;
+
+    try {
+        // Check if plan exists for this date
+        const existing = await pool.query(
+            'SELECT * FROM scheduled_meals WHERE user_id = $1 AND scheduled_date = $2 AND meal_type = $3',
+            [userId, date, 'daily_plan']
+        );
+
+        let result;
+        if (existing.rows.length > 0) {
+            // Update only water glasses in existing plan
+            const currentData = existing.rows[0].meal_plan_data || {};
+            const updatedData = {
+                ...currentData,
+                waterGlasses: waterGlasses
+            };
+
+            result = await pool.query(
+                `UPDATE scheduled_meals 
+                 SET meal_plan_data = $1, last_updated = NOW()
+                 WHERE id = $2
+                 RETURNING *`,
+                [JSON.stringify(updatedData), existing.rows[0].id]
+            );
+        } else {
+            // Create new plan with only water data
+            const mealPlanData = { waterGlasses: waterGlasses };
+            result = await pool.query(
+                `INSERT INTO scheduled_meals (user_id, scheduled_date, meal_type, meal_plan_data, total_calories, total_protein, date_created, last_updated)
+                 VALUES ($1, $2::date, 'daily_plan', $3, 0, 0, NOW(), NOW())
+                 RETURNING *`,
+                [userId, date, JSON.stringify(mealPlanData)]
+            );
+        }
+
+        res.json({
+            success: true,
+            waterGlasses: waterGlasses,
+            plan: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating water intake:', error);
+        res.status(500).json({ error: 'Failed to update water intake' });
+    }
+});
+
+// Update meal consumed state (independent endpoint for marking meals as eaten)
+app.patch('/api/meals/consumed', async (req, res) => {
+    const { userId, date, mealId, consumed } = req.body;
+
+    console.log('📥 Received consumed update request:', { userId, date, mealId, consumed });
+
+    try {
+        // Get existing plan
+        const existing = await pool.query(
+            'SELECT * FROM scheduled_meals WHERE user_id = $1 AND scheduled_date = $2 AND meal_type = $3',
+            [userId, date, 'daily_plan']
+        );
+
+        if (existing.rows.length === 0) {
+            console.log('❌ No meal plan found for date:', date);
+            return res.status(404).json({
+                error: 'Meal plan not found for this date',
+                details: 'Please add meals to this date first'
+            });
+        }
+
+        const currentData = existing.rows[0].meal_plan_data || {};
+        console.log('📋 Current meal plan data:', JSON.stringify(currentData, null, 2));
+
+        let updated = false;
+        let totalConsumedCalories = 0;
+        let totalConsumedProtein = 0;
+
+        // Update consumed state for the specific meal across all meal types
+        ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(mealType => {
+            if (currentData[mealType]) {
+                if (Array.isArray(currentData[mealType])) {
+                    // Handle array of meals
+                    currentData[mealType] = currentData[mealType].map(meal => {
+                        if (meal.id === mealId) {
+                            console.log(`✅ Found meal ${mealId} in ${mealType} array, updating consumed to ${consumed}`);
+                            updated = true;
+                            return { ...meal, consumed };
+                        }
+                        return meal;
+                    });
+                } else if (currentData[mealType].id === mealId) {
+                    // Handle single meal object
+                    console.log(`✅ Found meal ${mealId} in ${mealType}, updating consumed to ${consumed}`);
+                    currentData[mealType] = { ...currentData[mealType], consumed };
+                    updated = true;
+                }
+
+                // Calculate consumed totals
+                if (Array.isArray(currentData[mealType])) {
+                    currentData[mealType].forEach(meal => {
+                        if (meal.consumed) {
+                            totalConsumedCalories += meal.calories || 0;
+                            totalConsumedProtein += meal.protein || 0;
+                        }
+                    });
+                } else if (currentData[mealType].consumed) {
+                    totalConsumedCalories += currentData[mealType].calories || 0;
+                    totalConsumedProtein += currentData[mealType].protein || 0;
+                }
+            }
+        });
+
+        if (!updated) {
+            console.log('❌ Meal not found in any meal type:', mealId);
+            return res.status(404).json({
+                error: 'Meal not found in plan',
+                details: `Meal ID ${mealId} not found in breakfast, lunch, dinner, or snacks`
+            });
+        }
+
+        // Update the database
+        const result = await pool.query(
+            `UPDATE scheduled_meals 
+             SET meal_plan_data = $1, last_updated = NOW()
+             WHERE id = $2
+             RETURNING *`,
+            [JSON.stringify(currentData), existing.rows[0].id]
+        );
+
+        console.log('✅ Successfully updated meal consumed state');
+
+        res.json({
+            success: true,
+            consumed,
+            mealId,
+            consumedCalories: totalConsumedCalories,
+            consumedProtein: totalConsumedProtein,
+            plan: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating meal consumed state:', error);
+        res.status(500).json({ error: 'Failed to update meal consumed state' });
+    }
+});
+
 // Add individual meal to a specific meal type (breakfast, lunch, dinner, or snacks)
 app.post('/api/meals/add', async (req, res) => {
     const { userId, date, mealType, meal } = req.body;
@@ -925,6 +1070,121 @@ app.put('/api/daily-meal-plan/consume', async (req, res) => {
     } catch (error) {
         console.error('Error marking meal consumed:', error);
         res.status(500).json({ error: 'Failed to mark meal consumed' });
+    }
+});
+
+// ============================================
+// WEIGHT TRACKING ROUTES
+// ============================================
+
+// Create weight_logs table if it doesn't exist
+pool.query(`
+    CREATE TABLE IF NOT EXISTS weight_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        weight DECIMAL(5,2) NOT NULL,
+        bmi DECIMAL(4,2),
+        log_date DATE NOT NULL,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, log_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_weight_logs_user_date ON weight_logs(user_id, log_date DESC);
+`).then(() => {
+    console.log('✅ Weight logs table ready');
+}).catch(err => {
+    console.error('❌ Error creating weight_logs table:', err);
+});
+
+// Log weight progress
+app.post('/api/progress/weight', async (req, res) => {
+    const { userId, weight, date, notes } = req.body;
+
+    try {
+        // Get user's height to calculate BMI
+        const userResult = await pool.query(
+            'SELECT height FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const height = userResult.rows[0].height;
+        const bmi = height ? (weight / Math.pow(height / 100, 2)).toFixed(2) : null;
+
+        // Insert or update weight log
+        const result = await pool.query(
+            `INSERT INTO weight_logs (user_id, weight, bmi, log_date, notes)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (user_id, log_date)
+             DO UPDATE SET weight = $2, bmi = $3, notes = $5, created_at = NOW()
+             RETURNING *`,
+            [userId, weight, bmi, date, notes]
+        );
+
+        // Also update current weight in users table
+        await pool.query(
+            'UPDATE users SET weight = $1, updated_at = NOW() WHERE id = $2',
+            [weight, userId]
+        );
+
+        res.json({
+            success: true,
+            log: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error logging weight:', error);
+        res.status(500).json({ error: 'Failed to log weight' });
+    }
+});
+
+// Get weight history
+app.get('/api/progress/weight/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    try {
+        let query = 'SELECT * FROM weight_logs WHERE user_id = $1';
+        const params = [userId];
+
+        if (startDate && endDate) {
+            query += ' AND log_date BETWEEN $2 AND $3';
+            params.push(startDate, endDate);
+        }
+
+        query += ' ORDER BY log_date ASC';
+
+        const result = await pool.query(query, params);
+
+        res.json({
+            success: true,
+            logs: result.rows
+        });
+    } catch (error) {
+        console.error('Error fetching weight history:', error);
+        res.status(500).json({ error: 'Failed to fetch weight history' });
+    }
+});
+
+// Get latest weight
+app.get('/api/progress/weight/:userId/latest', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const result = await pool.query(
+            'SELECT * FROM weight_logs WHERE user_id = $1 ORDER BY log_date DESC LIMIT 1',
+            [userId]
+        );
+
+        res.json({
+            success: true,
+            log: result.rows[0] || null
+        });
+    } catch (error) {
+        console.error('Error fetching latest weight:', error);
+        res.status(500).json({ error: 'Failed to fetch latest weight' });
     }
 });
 
