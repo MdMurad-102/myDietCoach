@@ -47,17 +47,42 @@ export default function DailyMealPlanGenerator() {
     // Get date options (today, tomorrow, day after tomorrow)
     const getDateOptions = () => {
         const dates = [];
+        // Get today's date components directly
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+
+        console.log(`📅 BASE DATE: Year=${currentYear}, Month=${currentMonth + 1}, Day=${currentDay}`);
+
         for (let i = 0; i < 7; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() + i);
-            const dateStr = getLocalDateString(date);
-            const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            // Create date at noon to avoid any timezone midnight issues
+            const targetDate = new Date(currentYear, currentMonth, currentDay + i, 12, 0, 0);
+
+            // Generate date string using the date components directly
+            const year = targetDate.getFullYear();
+            const month = targetDate.getMonth() + 1;
+            const day = targetDate.getDate();
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            // Create label from the same components
+            let label: string;
+            if (i === 0) {
+                label = 'Today';
+            } else if (i === 1) {
+                label = 'Tomorrow';
+            } else {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                label = `${monthNames[month - 1]} ${day}`;
+            }
+
+            console.log(`📅 Option ${i}: Label="${label}" DateStr="${dateStr}" (Y=${year} M=${month} D=${day})`);
             dates.push({ date: dateStr, label });
         }
-        return dates;
-    };
 
-    // Generate initial meal plan
+        console.log(`📅 Generated ${dates.length} date options`);
+        return dates;
+    };    // Generate initial meal plan
     const handleGeneratePlan = () => {
         setLoading(true);
         setTimeout(() => {
@@ -101,6 +126,10 @@ export default function DailyMealPlanGenerator() {
         try {
             // Use selected date instead of always today
             const dateLabel = getDateOptions().find(d => d.date === selectedDate)?.label || selectedDate;
+
+            console.log('🗓️ DAILY MEAL PLAN - Selected Date:', selectedDate);
+            console.log('🗓️ DAILY MEAL PLAN - Date Label:', dateLabel);
+            console.log('🗓️ DAILY MEAL PLAN - Date Type:', typeof selectedDate);
 
             // Prepare meals in the format expected by saveFullDailyPlan
             const mealsToSave = {
@@ -159,6 +188,8 @@ export default function DailyMealPlanGenerator() {
             };
 
             // Save complete daily plan to selected date
+            console.log('💾 SAVING MEAL PLAN TO DATE:', selectedDate);
+            console.log('💾 DATE LABEL IN UI:', dateLabel);
             await saveFullDailyPlan(selectedDate, mealsToSave);
 
             // Refresh meal data

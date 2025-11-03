@@ -205,6 +205,20 @@ export default function ProReport() {
                         </View>
                         <Ionicons name="chevron-forward" size={24} color="#ccc" />
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.navButton}
+                        onPress={() => router.push("/BMICalculator" as any)}
+                    >
+                        <View style={[styles.navIconContainer, { backgroundColor: "#e74c3c20" }]}>
+                            <Ionicons name="calculator-outline" size={28} color="#e74c3c" />
+                        </View>
+                        <View style={styles.navTextContainer}>
+                            <Text style={styles.navTitle}>BMI Calculator</Text>
+                            <Text style={styles.navSubtitle}>Calculate BMI & BMR</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+                    </TouchableOpacity>
                 </View>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Performance Summary</Text>

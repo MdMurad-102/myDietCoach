@@ -348,14 +348,16 @@ app.post('/api/meals/daily-plan', async (req, res) => {
                 [JSON.stringify(meals), totalCalories, totalProtein, existing.rows[0].id]
             );
         } else {
-            // Create new plan
+            // Create new plan - use TO_DATE to prevent timezone conversion
             result = await pool.query(
                 `INSERT INTO scheduled_meals (user_id, scheduled_date, meal_type, meal_plan_data, total_calories, total_protein, date_created, last_updated)
-                 VALUES ($1, $2::date, 'daily_plan', $3, $4, $5, NOW(), NOW())
-                 RETURNING *`,
+                 VALUES ($1, TO_DATE($2, 'YYYY-MM-DD'), 'daily_plan', $3, $4, $5, NOW(), NOW())
+                 RETURNING *, scheduled_date::text as date_string`,
                 [userId, date, JSON.stringify(meals), totalCalories, totalProtein]
             );
-            console.log('💾 Saved to database with date:', result.rows[0].scheduled_date);
+            console.log('💾 Backend SENT date:', date);
+            console.log('💾 Backend SAVED date in DB (timestamp):', result.rows[0].scheduled_date);
+            console.log('💾 Backend SAVED date in DB (as text):', result.rows[0].date_string);
         }
 
         res.json({
@@ -602,7 +604,8 @@ app.get('/api/meals/range/:userId', async (req, res) => {
 
     try {
         const result = await pool.query(
-            `SELECT * FROM scheduled_meals 
+            `SELECT *, scheduled_date::text as scheduled_date_text 
+             FROM scheduled_meals 
              WHERE user_id = $1 
              AND scheduled_date BETWEEN $2 AND $3 
              AND meal_type = 'daily_plan'
@@ -610,9 +613,15 @@ app.get('/api/meals/range/:userId', async (req, res) => {
             [userId, startDate, endDate]
         );
 
+        // Replace scheduled_date with the text version to avoid timezone issues
+        const plans = result.rows.map(row => ({
+            ...row,
+            scheduled_date: row.scheduled_date_text
+        }));
+
         res.json({
             success: true,
-            plans: result.rows
+            plans: plans
         });
     } catch (error) {
         console.error('Error getting meal range:', error);

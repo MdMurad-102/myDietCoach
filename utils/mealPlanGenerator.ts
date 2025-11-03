@@ -213,24 +213,31 @@ export const generateDailyMealPlan = (options: MealPlanOptions = {}): DailyMealP
         return closestMeals[randomIndex];
     };
 
-    // Select meals for each category with wider tolerance for more variety
+    // Select meals for each category with tighter tolerance for accuracy
     console.log('🎲 Selecting meals randomly...');
-    const breakfast = selectMeal(breakfastMeals, calorieTargets.breakfast, 200); // Wider tolerance = more variety
-    const lunch = selectMeal(lunchMeals, calorieTargets.lunch, 200);
-    const dinner = selectMeal(dinnerMeals, calorieTargets.dinner, 200);
-    const snack = selectMeal(snackMeals, calorieTargets.snack, 150);
+    const breakfast = selectMeal(breakfastMeals, calorieTargets.breakfast, 100); // Tighter tolerance = more accuracy
+    const lunch = selectMeal(lunchMeals, calorieTargets.lunch, 100);
+    const dinner = selectMeal(dinnerMeals, calorieTargets.dinner, 100);
+    const snack = selectMeal(snackMeals, calorieTargets.snack, 75);
 
     console.log('\n✅ Generated Meal Plan:');
-    console.log(`  Breakfast: ${breakfast.nameEn} (${breakfast.calories} cal, ${breakfast.protein}g protein)`);
-    console.log(`  Lunch: ${lunch.nameEn} (${lunch.calories} cal, ${lunch.protein}g protein)`);
-    console.log(`  Dinner: ${dinner.nameEn} (${dinner.calories} cal, ${dinner.protein}g protein)`);
-    console.log(`  Snack: ${snack.nameEn} (${snack.calories} cal, ${snack.protein}g protein)`);
+    console.log(`  Breakfast: ${breakfast.nameEn} (${breakfast.calories} cal, target: ${calorieTargets.breakfast} cal)`);
+    console.log(`  Lunch: ${lunch.nameEn} (${lunch.calories} cal, target: ${calorieTargets.lunch} cal)`);
+    console.log(`  Dinner: ${dinner.nameEn} (${dinner.calories} cal, target: ${calorieTargets.dinner} cal)`);
+    console.log(`  Snack: ${snack.nameEn} (${snack.calories} cal, target: ${calorieTargets.snack} cal)`);
 
     // Calculate totals
     const totalCalories = breakfast.calories + lunch.calories + dinner.calories + snack.calories;
     const totalProtein = breakfast.protein + lunch.protein + dinner.protein + snack.protein;
     const totalCarbs = breakfast.carbs + lunch.carbs + dinner.carbs + snack.carbs;
     const totalFat = breakfast.fat + lunch.fat + dinner.fat + snack.fat;
+
+    const calorieDifference = totalCalories - targetCalories;
+    const percentageDiff = ((calorieDifference / targetCalories) * 100).toFixed(1);
+
+    console.log(`\n📊 Total: ${totalCalories} cal (Target: ${targetCalories} cal)`);
+    console.log(`   Difference: ${calorieDifference > 0 ? '+' : ''}${calorieDifference} cal (${percentageDiff}%)`);
+    console.log(`   Protein: ${totalProtein}g, Carbs: ${totalCarbs}g, Fat: ${totalFat}g`);
 
     // Get today's date in ISO format
     const today = new Date();
