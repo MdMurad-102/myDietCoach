@@ -1195,7 +1195,8 @@ app.get('/api/progress/weight/:userId/latest', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 MyDietCoach API Server running on port ${PORT}`);
     console.log(`📡 Health check: http://localhost:${PORT}/health`);
-    console.log(`📱 Mobile app should connect to: http://192.168.1.100:${PORT}/api`);
+    console.log(`📱 Server accessible from any network on port ${PORT}`);
+    console.log(`💡 To connect from mobile: Find your computer's IP and use http://YOUR_IP:${PORT}/api`);
 });
 
 // Handle graceful shutdown
