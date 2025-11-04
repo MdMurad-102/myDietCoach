@@ -3,21 +3,11 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { API_CONFIG } from '../config/api.config';
 
-// Backend API URL - update this with your server URL
-// Using localhost for Expo tunnel or your computer's IP for same network
-const API_URL = __DEV__
-    ? 'http://localhost:3000/api'  // Development (uses Expo tunnel)
-    : 'https://your-backend-url.com/api'; // Production (deployed server)
-
-// Create axios instance with default config
-const api = axios.create({
-    baseURL: API_URL,
-    timeout: 10000,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
+// Create axios instance with network-independent config
+// This automatically detects your WiFi network and works anywhere
+const api = axios.create(API_CONFIG);
 
 // ============================================
 // TYPE DEFINITIONS
