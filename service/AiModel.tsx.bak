@@ -35,25 +35,25 @@ export const generateRecipeFromText = async (prompt: string): Promise<string | n
   for (const model of freeModels) {
     try {
       console.log(`🤖 Trying model: ${model}`);
-
+      
       const result = await openai.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 1500, // Reduced to avoid limits
         temperature: 0.7,
       });
-
+      
       console.log(`✅ Success with model: ${model}`);
       return result.choices[0].message.content;
     } catch (error: any) {
       console.warn(`⚠️ Model ${model} failed:`, error.message);
-
+      
       // If rate limited, wait 2 seconds before trying next model
       if (error.status === 429) {
         console.log("⏳ Rate limited, waiting 2 seconds...");
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-
+      
       // Continue to next model
       continue;
     }
@@ -88,25 +88,25 @@ export const calculateCalories = async (prompt: string): Promise<string | null> 
   for (const model of freeModels) {
     try {
       console.log(`🤖 Trying model: ${model}`);
-
+      
       const result = await openai.chat.completions.create({
         model: model,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 800, // Reduced tokens for calorie calculation
         temperature: 0.5,
       });
-
+      
       console.log(`✅ Success with model: ${model}`);
       return result.choices[0].message.content;
     } catch (error: any) {
       console.warn(`⚠️ Model ${model} failed:`, error.message);
-
+      
       // If rate limited, wait 2 seconds
       if (error.status === 429) {
         console.log("⏳ Rate limited, waiting 2 seconds...");
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-
+      
       continue;
     }
   }
@@ -128,9 +128,7 @@ export const generateRecipeFromImage = async (base64Image: string): Promise<stri
 
   try {
     const result = await openai.chat.completions.create({
-      model: "google/gemini-2.0-flash-exp:free",
-      max_tokens: 1500,
-      temperature: 0.7,
+      model: "openai/gpt-4o",
       messages: [
         {
           role: "user",
