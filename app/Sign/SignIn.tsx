@@ -1,10 +1,8 @@
 import { UserContext } from "@/context/UserContext";
-import { api } from "@/convex/_generated/api";
-import { auth } from "@/service/firebaseConfig";
+import { isUserProfileComplete } from "@/utils/userHelpers";
 import { Ionicons } from "@expo/vector-icons";
-import { useConvex } from "convex/react";
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { authenticateUser, getUser } from "../../service/api";
 import React, { useContext, useState } from "react";
 import {
   Alert,
@@ -14,12 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+// ...existing imports
+
 export default function SignIn() {
   const [email, setemail] = useState("");
   const [password, setPassword] = useState("");
   const [showpassword, setshowpassword] = useState(false);
   const router = useRouter();
-  const convex = useConvex();
   const context = useContext(UserContext);
 
   if (!context)
@@ -28,40 +27,50 @@ export default function SignIn() {
 
   const onSignIn = () => {
     if (!email || !password) {
-      Alert.alert("Enter Correct email or password");
+      Alert.alert("Error", "Please enter both email and password");
       return;
     }
 
-    signInWithEmailAndPassword(auth, email, password)
-      .then(async (userCredential) => {
-        const firebaseUser = userCredential.user;
-
-        // Fetch full user from Convex
-        const userData = await convex.query(api.Users.GetUser, {
-          email: email,
-        });
+    (async () => {
+      try {
+        const authUser = await authenticateUser(email, password);
+        console.log('Authenticated user:', authUser);
+        const userData = await getUser(email);
 
         if (!userData) {
-          Alert.alert("User not found in Convex");
+          Alert.alert('Error', 'User data not found.');
           return;
         }
 
-        // ✅ Fully load into UserContext
-        setUser(userData);
+        setUser({
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          weight: userData.weight,
+          height: userData.height,
+          gender: userData.gender,
+          goal: userData.goal,
+          age: userData.age,
+          calories: userData.calories,
+          proteins: userData.proteins,
+          country: userData.country,
+          city: userData.city,
+          diet_type: userData.diet_type,
+          daily_water_goal: userData.waterGoal || 8,
+          credit: 0,
+        });
 
-        Alert.alert("Login Successful");
-
-        // ✅ Navigation happens after setting UserContext
-        if (!userData.height) {
-          router.replace("/NewUser/Index");
+        Alert.alert('Success', 'Login Successful');
+        if (isUserProfileComplete(userData)) {
+          router.replace('/(tabs)/Home');
         } else {
-          router.replace("/(tabs)/Home");
+          router.replace('/NewUser/Index');
         }
-      })
-      .catch((error) => {
-        console.error("Login error:", error.message);
-        Alert.alert("Login Failed", error.message);
-      });
+      } catch (err: any) {
+        console.error('Login error:', err);
+        Alert.alert('Login Failed', err.message || 'Failed to login');
+      }
+    })();
   };
 
   const showOrNot = () => setshowpassword((prev) => !prev);
@@ -77,7 +86,7 @@ export default function SignIn() {
           style={styles.icon}
         />
         <TextInput
-          placeholder="email"
+          placeholder="Email"
           style={styles.input}
           value={email}
           onChangeText={setemail}

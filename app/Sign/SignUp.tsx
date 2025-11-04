@@ -1,8 +1,7 @@
 import { UserContext } from "@/context/UserContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+// Removed Firebase auth; using local mock auth instead
 import React, { useContext, useState } from "react";
 import {
   Alert,
@@ -12,8 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { api } from "../../convex/_generated/api";
-import { app } from "../../service/firebaseConfig";
+import { registerUser } from "../../service/api";
 
 export default function SignUp() {
   const [username, setUsername] = useState("");
@@ -22,7 +20,6 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const createNewUsers = useMutation(api.Users.CreateNewUsers);
   const context = useContext(UserContext);
 
   if (!context) {
@@ -41,38 +38,25 @@ export default function SignUp() {
       return;
     }
 
-    const auth = getAuth(app);
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(async (userCredential) => {
-        Alert.alert("Success", "Account created successfully!");
-        console.log("User:", userCredential.user);
-        const user = userCredential.user;
-        if (user) {
-          // Call your backend to create user in DB
-          const result = await createNewUsers({
-            name: username,
-            email: email,
-          });
-
-          console.log("CreateNewUsers result:", result);
-
-          if ("_id" in result) {
-            setUser({
-              _id: result._id,
-              name: result.name,
-              email: result.email,
-            });
-          } else {
-            // If result does not have _id, set user to null (or handle error accordingly)
-            setUser(null);
-          }
-        }
-        router.push("/Sign/SignIn"); // navigate to login
-      })
-      .catch((error) => {
-        console.error("Signup error:", error.message);
-        Alert.alert("Signup Failed", error.message);
-      });
+    // Use mock local registration
+    (async () => {
+      try {
+        const result = await registerUser(email, username, password);
+        console.log('registerUser result:', result);
+        setUser({
+          id: result.id,
+          name: result.name,
+          email: result.email,
+          credit: 0,
+          daily_water_goal: result.waterGoal || 8,
+        });
+        Alert.alert('Success', 'Account created successfully!');
+        router.push('/Sign/SignIn');
+      } catch (err: any) {
+        console.error('Registration error:', err);
+        Alert.alert('Registration Failed', err.message || 'Failed to register');
+      }
+    })();
   };
 
   return (

@@ -1,11 +1,11 @@
 import Prom from "@/context/Prom";
 import { UserContext } from "@/context/UserContext";
-import { api } from "@/convex/_generated/api";
-import { CalculateCalories } from "@/service/AiModel";
+import { updateUserProfile } from "@/service/api";
+import { calculateCalories } from "@/service/AiModel";
+import { isUserProfileComplete } from "@/utils/userHelpers";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -17,11 +17,6 @@ import {
 import Button from "../components/Button";
 import Input from "./Input";
 
-// Utility function to check if user profile is complete
-const isUserProfileComplete = (user: any) => {
-  return user && user.height && user.weight && user.calories && user.proteins;
-};
-
 export default function Index() {
   const [gender, setGender] = useState("");
   const [goal, setGoal] = useState("");
@@ -32,6 +27,8 @@ export default function Index() {
   const [city, setCity] = useState("");
   const [dietType, setDietType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const initialModeSet = useRef(false);
   const router = useRouter();
 
   const context = useContext(UserContext);
@@ -39,15 +36,32 @@ export default function Index() {
     throw new Error("UserContext must be used within a UserProvider");
 
   const { user, setUser } = context;
-  const updateTask = useMutation(api.Users.updateTask);
 
-  // Check if user already has data configured, if so redirect to home
+  // Pre-populate form fields with existing user data and determine mode
   useEffect(() => {
-    if (isUserProfileComplete(user)) {
-      // User already has profile data, redirect to home
-      router.replace("/(tabs)/Home");
+    if (user && !initialModeSet.current) {
+      // Set mode only once when component first loads
+      const userProfileComplete = isUserProfileComplete(user);
+      setIsEditMode(userProfileComplete);
+      initialModeSet.current = true;
+
+      console.log(
+        "Initial mode set:",
+        userProfileComplete ? "Edit" : "New User"
+      );
     }
-  }, [user, router]);
+
+    if (user) {
+      setGender(user.gender || "");
+      setGoal(user.goal || "");
+      setHeight(user.height || "");
+      setWeight(user.weight || "");
+      setAge(user.age || "");
+      setCountry(user.country || "");
+      setCity(user.city || "");
+      setDietType(user.diet_type || "");
+    }
+  }, [user]);
 
   // Show loading if user data is not loaded yet
   if (!user) {
@@ -64,36 +78,54 @@ export default function Index() {
   }
 
   const onContinue = async () => {
-    // Prevent action if user already has profile data
-    if (isUserProfileComplete(user)) {
-      router.replace("/(tabs)/Home");
-      return;
-    }
+    console.log("Button pressed - onContinue called");
 
     const ageNumber = parseInt(age);
-    if (
-      !weight ||
-      !height ||
-      !gender ||
-      !goal ||
-      !age ||
-      !country ||
-      !city ||
-      !dietType
-    ) {
-      Alert.alert("Enter all details to continue");
+    console.log("Current form data:", {
+      weight,
+      height,
+      gender,
+      goal,
+      age,
+      country,
+      city,
+      dietType,
+    });
+
+    // Check each field individually for better debugging
+    const missingFields = [];
+    if (!weight) missingFields.push("Weight");
+    if (!height) missingFields.push("Height");
+    if (!gender) missingFields.push("Gender");
+    if (!goal) missingFields.push("Goal");
+    if (!age) missingFields.push("Age");
+    if (!country) missingFields.push("Country");
+    if (!city) missingFields.push("City");
+    if (!dietType) missingFields.push("Diet Type");
+
+    if (missingFields.length > 0) {
+      console.log("Validation failed - missing fields:", missingFields);
+      Alert.alert(
+        "Missing Information",
+        `Please fill in the following fields: ${missingFields.join(", ")}`
+      );
       return;
     }
 
     if (isNaN(ageNumber) || ageNumber < 10 || ageNumber > 110) {
-      Alert.alert("Please enter a valid age between 10 and 110.");
+      console.log("Age validation failed:", ageNumber);
+      Alert.alert(
+        "Invalid Age",
+        "Please enter a valid age between 10 and 110."
+      );
       return;
     }
 
+    console.log("Validation passed, starting update process");
     setLoading(true);
 
     const data = {
-      id: user?._id,
+      id: user?.id,
       weight: weight,
       height: height,
       age: age,
@@ -101,14 +133,15 @@ export default function Index() {
       goal: goal,
       country: country,
       city: city,
-      dietType: dietType,
+      diet_type: dietType,
     };
 
     try {
       const PROMPT = JSON.stringify(data) + Prom.CALORIESANDPRO;
       console.log("Sending prompt to AI:", PROMPT);
+      console.log("API Key exists:", !!process.env.EXPO_PUBLIC_OPENROUTER_API_KEY);
 
-      const AiCalculate = await CalculateCalories(PROMPT);
+      const AiCalculate = await calculateCalories(PROMPT);
       const AIResult = AiCalculate;
 
       console.log("Raw AI Response:", AIResult);
@@ -165,15 +198,20 @@ export default function Index() {
         return;
       }
       console.log("AI Result:", removeJso);
-      console.log(user);
 
       // Validate that we have the required fields
+      // Handle both 'protein' and 'proteins' field names
+      const calories = removeJso?.calories;
+      const proteins = removeJso?.proteins || removeJso?.protein;
+
       if (
         !removeJso ||
-        typeof removeJso.calories !== "number" ||
-        typeof removeJso.proteins !== "number"
+        typeof calories !== "number" ||
+        typeof proteins !== "number"
       ) {
         console.error("Invalid AI response structure:", removeJso);
+        console.error("Calories:", calories, "Type:", typeof calories);
+        console.error("Proteins:", proteins, "Type:", typeof proteins);
         Alert.alert(
           "Error",
           "AI response is missing required nutrition data. Please try again."
@@ -182,16 +220,14 @@ export default function Index() {
         return;
       }
 
-      const { calories, proteins } = removeJso;
-
-      if (!user?._id) {
+      if (!user?.id) {
         Alert.alert("User ID is missing. Make sure user is logged in.");
         setLoading(false);
         return;
       }
 
-      await updateTask({
-        id: user._id,
+      // Update database
+      const updatedUserData = await updateUserProfile(user.id, {
         weight,
         height,
         gender,
@@ -201,28 +237,40 @@ export default function Index() {
         proteins,
         country,
         city,
-        dietType,
+        diet_type: dietType,
       });
 
-      setUser({
-        ...user,
-        weight,
-        height,
-        gender,
-        goal,
-        age,
-        calories,
-        proteins,
-        country,
-        city,
-        dietType,
-      });
+      // Update UserContext with all new data
+      setUser(updatedUserData);
+      console.log("User context updated:", updatedUserData);
+      console.log("Current isEditMode:", isEditMode);
 
-      // Navigate directly without alert
-      router.replace("/(tabs)/Home");
+      // IMMEDIATE NAVIGATION - Skip alerts for testing
+      if (isEditMode) {
+        console.log("IMMEDIATE: Navigating to Profile page (edit mode)");
+        router.push("/(tabs)/Profile");
+      } else {
+        console.log("IMMEDIATE: Navigating to Home page (new user mode)");
+        router.replace("/(tabs)/Home");
+      }
+
+      // Show alert after navigation as confirmation
+      setTimeout(() => {
+        if (isEditMode) {
+          Alert.alert(
+            "Success!",
+            "Your profile has been updated successfully!"
+          );
+        } else {
+          Alert.alert(
+            "Welcome!",
+            "Your profile has been set up successfully! Welcome to My Diet Coach!"
+          );
+        }
+      }, 1000);
     } catch (err) {
       console.error("Update failed", err);
-      Alert.alert("Error", "Failed to update preferences.");
+      Alert.alert("Error", "Failed to update profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -232,11 +280,17 @@ export default function Index() {
     <ScrollView
       contentContainerStyle={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      scrollEnabled={true}
     >
       <View style={styles.container}>
-        <Text style={styles.header}>Tell us about yourself</Text>
+        <Text style={styles.header}>
+          {isEditMode ? "Edit Your Profile" : "Tell us about yourself"}
+        </Text>
         <Text style={styles.subHeader}>
-          This helps us personalize your meal plan
+          {isEditMode
+            ? "Update your information to improve your meal plan recommendations"
+            : "This helps us personalize your meal plan"}
         </Text>
 
         <View style={styles.row}>
@@ -265,13 +319,13 @@ export default function Index() {
 
         <View style={styles.row}>
           <Input
-            placeholder="e.g. India"
+            placeholder="e.g. Bangladesh"
             label="Country"
             value={country}
             onChangeText={setCountry}
           />
           <Input
-            placeholder="e.g. Mumbai"
+            placeholder="e.g. Rajshahi"
             label="City"
             value={city}
             onChangeText={setCity}
@@ -425,7 +479,9 @@ export default function Index() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <Button Data="Continue" onPress={onContinue} loading={loading} />
+          <Button onPress={onContinue} loading={loading}>
+            {isEditMode ? "Update Profile" : "Continue"}
+          </Button>
         </View>
       </View>
     </ScrollView>
@@ -520,5 +576,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 30,
+    zIndex: 1000,
+    pointerEvents: "auto",
   },
 });

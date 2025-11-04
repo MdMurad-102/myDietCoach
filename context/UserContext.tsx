@@ -1,12 +1,15 @@
 // context/UserContext.tsx
 
-import { Id } from "@/convex/_generated/dataModel";
 import { createContext } from "react";
 
+// Updated User type for PostgreSQL (no longer using Convex Id)
 export type UserType = {
-  _id: Id<"Users">;
+  id: number; // PostgreSQL uses number ids
   name: string;
   email: string;
+  picture?: string;
+  subscription_id?: string;
+  credit?: number;
   weight?: string;
   height?: string;
   gender?: string;
@@ -16,7 +19,10 @@ export type UserType = {
   proteins?: number;
   country?: string;
   city?: string;
-  dietType?: string;
+  diet_type?: string;
+  daily_water_goal?: number;
+  created_at?: Date;
+  updated_at?: Date;
 } | null;
 
 export type UserContextType = {

@@ -1,0 +1,777 @@
+// Daily Meal Plan Generator Screen
+// Generate, customize, and save complete Bangladesh daily meal plans
+
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useContext, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { useMealContext } from '../../context/UnifiedMealContext';
+import { UserContext } from '../../context/UserContext';
+import { DailyMealPlan, generateDailyMealPlan, MealPlanOptions, regenerateMeal } from '../../utils/mealPlanGenerator';
+
+export default function DailyMealPlanGenerator() {
+    const [mealPlan, setMealPlan] = useState<DailyMealPlan | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Helper function to get local date string (YYYY-MM-DD) without timezone issues
+    const getLocalDateString = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
+    const [options, setOptions] = useState<MealPlanOptions>({
+        targetCalories: 2000,
+        vegetarianOnly: false,
+        veganOnly: false,
+        highProtein: false,
+        quickMeals: false,
+    });
+
+    const { scheduleMeal, saveFullDailyPlan, refreshMealData } = useMealContext();
+    const userContext = useContext(UserContext);
+    const user = userContext?.user;
+
+    // Get date options (today, tomorrow, day after tomorrow)
+    const getDateOptions = () => {
+        const dates = [];
+        // Get today's date components directly
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+
+        console.log(`📅 BASE DATE: Year=${currentYear}, Month=${currentMonth + 1}, Day=${currentDay}`);
+
+        for (let i = 0; i < 7; i++) {
+            // Create date at noon to avoid any timezone midnight issues
+            const targetDate = new Date(currentYear, currentMonth, currentDay + i, 12, 0, 0);
+
+            // Generate date string using the date components directly
+            const year = targetDate.getFullYear();
+            const month = targetDate.getMonth() + 1;
+            const day = targetDate.getDate();
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            // Create label from the same components
+            let label: string;
+            if (i === 0) {
+                label = 'Today';
+            } else if (i === 1) {
+                label = 'Tomorrow';
+            } else {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                label = `${monthNames[month - 1]} ${day}`;
+            }
+
+            console.log(`📅 Option ${i}: Label="${label}" DateStr="${dateStr}" (Y=${year} M=${month} D=${day})`);
+            dates.push({ date: dateStr, label });
+        }
+
+        console.log(`📅 Generated ${dates.length} date options`);
+        return dates;
+    };    // Generate initial meal plan
+    const handleGeneratePlan = () => {
+        setLoading(true);
+        setTimeout(() => {
+            const newPlan = generateDailyMealPlan(options);
+            setMealPlan(newPlan);
+            setLoading(false);
+        }, 800);
+    };
+
+    // Regenerate all meals
+    const handleRegenerateAll = () => {
+        setLoading(true);
+        setTimeout(() => {
+            const newPlan = generateDailyMealPlan(options);
+            setMealPlan(newPlan);
+            setLoading(false);
+        }, 800);
+    };
+
+    // Regenerate specific meal
+    const handleRegenerateMeal = (mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
+        if (!mealPlan) return;
+
+        setLoading(true);
+        setTimeout(() => {
+            const updatedPlan = regenerateMeal(mealPlan, mealType, options);
+            setMealPlan(updatedPlan);
+            setLoading(false);
+        }, 500);
+    };
+
+    // Save complete daily meal plan
+    const handleSavePlan = async () => {
+        if (!mealPlan || !user?.id) {
+            Alert.alert('Error', 'Please generate a meal plan first');
+            return;
+        }
+
+        setSaving(true);
+
+        try {
+            // Use selected date instead of always today
+            const dateLabel = getDateOptions().find(d => d.date === selectedDate)?.label || selectedDate;
+
+            console.log('🗓️ DAILY MEAL PLAN - Selected Date:', selectedDate);
+            console.log('🗓️ DAILY MEAL PLAN - Date Label:', dateLabel);
+            console.log('🗓️ DAILY MEAL PLAN - Date Type:', typeof selectedDate);
+
+            // Prepare meals in the format expected by saveFullDailyPlan
+            const mealsToSave = {
+                breakfast: {
+                    id: mealPlan.breakfast.id,
+                    recipeName: mealPlan.breakfast.nameEn,
+                    name: mealPlan.breakfast.nameEn,
+                    nameBn: mealPlan.breakfast.name, // Bangla name
+                    calories: mealPlan.breakfast.calories,
+                    protein: mealPlan.breakfast.protein,
+                    carbs: mealPlan.breakfast.carbs,
+                    fat: mealPlan.breakfast.fat,
+                    ingredients: mealPlan.breakfast.ingredients,
+                    prepTime: mealPlan.breakfast.prepTime,
+                    servings: mealPlan.breakfast.servings,
+                },
+                lunch: {
+                    id: mealPlan.lunch.id,
+                    recipeName: mealPlan.lunch.nameEn,
+                    name: mealPlan.lunch.nameEn,
+                    nameBn: mealPlan.lunch.name,
+                    calories: mealPlan.lunch.calories,
+                    protein: mealPlan.lunch.protein,
+                    carbs: mealPlan.lunch.carbs,
+                    fat: mealPlan.lunch.fat,
+                    ingredients: mealPlan.lunch.ingredients,
+                    prepTime: mealPlan.lunch.prepTime,
+                    servings: mealPlan.lunch.servings,
+                },
+                dinner: {
+                    id: mealPlan.dinner.id,
+                    recipeName: mealPlan.dinner.nameEn,
+                    name: mealPlan.dinner.nameEn,
+                    nameBn: mealPlan.dinner.name,
+                    calories: mealPlan.dinner.calories,
+                    protein: mealPlan.dinner.protein,
+                    carbs: mealPlan.dinner.carbs,
+                    fat: mealPlan.dinner.fat,
+                    ingredients: mealPlan.dinner.ingredients,
+                    prepTime: mealPlan.dinner.prepTime,
+                    servings: mealPlan.dinner.servings,
+                },
+                snacks: {
+                    id: mealPlan.snack.id,
+                    recipeName: mealPlan.snack.nameEn,
+                    name: mealPlan.snack.nameEn,
+                    nameBn: mealPlan.snack.name,
+                    calories: mealPlan.snack.calories,
+                    protein: mealPlan.snack.protein,
+                    carbs: mealPlan.snack.carbs,
+                    fat: mealPlan.snack.fat,
+                    ingredients: mealPlan.snack.ingredients,
+                    prepTime: mealPlan.snack.prepTime,
+                    servings: mealPlan.snack.servings,
+                },
+            };
+
+            // Save complete daily plan to selected date
+            console.log('💾 SAVING MEAL PLAN TO DATE:', selectedDate);
+            console.log('💾 DATE LABEL IN UI:', dateLabel);
+            await saveFullDailyPlan(selectedDate, mealsToSave);
+
+            // Refresh meal data
+            await refreshMealData();
+
+            setSaving(false);
+
+            // Show success message with date
+            Alert.alert(
+                '✅ Meal Plan Saved!',
+                `Your complete daily meal plan has been saved for ${dateLabel}.`,
+                [
+                    {
+                        text: 'View on Home',
+                        onPress: () => router.push('/(tabs)/Home'),
+                    },
+                    {
+                        text: 'OK',
+                        style: 'cancel',
+                    },
+                ]
+            );
+        } catch (error) {
+            setSaving(false);
+            Alert.alert('Error', 'Failed to save meal plan. Please try again.');
+            console.error('Save meal plan error:', error);
+        }
+    };
+
+    // Get meal icon
+    const getMealIcon = (mealType: string): keyof typeof Ionicons.glyphMap => {
+        switch (mealType) {
+            case 'breakfast':
+                return 'sunny';
+            case 'lunch':
+                return 'restaurant';
+            case 'dinner':
+                return 'moon';
+            case 'snack':
+                return 'cafe';
+            default:
+                return 'fast-food';
+        }
+    };
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            router.push('/(tabs)/Meals');
+                        }}
+                        style={styles.backButton}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Daily Meal Plan</Text>
+                    <View style={styles.placeholder} />
+                </View>
+
+                {/* Date Selector */}
+                <View style={styles.dateSection}>
+                    <Text style={styles.sectionTitle}>Select Date</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+                        {getDateOptions().map((dateOption) => (
+                            <TouchableOpacity
+                                key={dateOption.date}
+                                style={[
+                                    styles.dateButton,
+                                    selectedDate === dateOption.date && styles.dateButtonActive,
+                                ]}
+                                onPress={() => setSelectedDate(dateOption.date)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.dateButtonText,
+                                        selectedDate === dateOption.date && styles.dateButtonTextActive,
+                                    ]}
+                                >
+                                    {dateOption.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* Options Section */}
+                <View style={styles.optionsSection}>
+                    <Text style={styles.sectionTitle}>Meal Preferences</Text>
+
+                    {/* Target Calories */}
+                    <View style={styles.optionRow}>
+                        <Text style={styles.optionLabel}>Target Calories:</Text>
+                        <View style={styles.calorieButtons}>
+                            {[1500, 2000, 2500].map((cal) => (
+                                <TouchableOpacity
+                                    key={cal}
+                                    style={[
+                                        styles.calorieButton,
+                                        options.targetCalories === cal && styles.calorieButtonActive,
+                                    ]}
+                                    onPress={() => setOptions({ ...options, targetCalories: cal })}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.calorieButtonText,
+                                            options.targetCalories === cal && styles.calorieButtonTextActive,
+                                        ]}
+                                    >
+                                        {cal}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Dietary Preferences */}
+                    <View style={styles.optionRow}>
+                        <TouchableOpacity
+                            style={styles.checkboxRow}
+                            onPress={() => setOptions({ ...options, vegetarianOnly: !options.vegetarianOnly })}
+                        >
+                            <Ionicons
+                                name={options.vegetarianOnly ? 'checkbox' : 'square-outline'}
+                                size={24}
+                                color="#4CAF50"
+                            />
+                            <Text style={styles.checkboxLabel}>Vegetarian Only</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.optionRow}>
+                        <TouchableOpacity
+                            style={styles.checkboxRow}
+                            onPress={() => setOptions({ ...options, highProtein: !options.highProtein })}
+                        >
+                            <Ionicons
+                                name={options.highProtein ? 'checkbox' : 'square-outline'}
+                                size={24}
+                                color="#FF9800"
+                            />
+                            <Text style={styles.checkboxLabel}>High Protein</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.optionRow}>
+                        <TouchableOpacity
+                            style={styles.checkboxRow}
+                            onPress={() => setOptions({ ...options, quickMeals: !options.quickMeals })}
+                        >
+                            <Ionicons
+                                name={options.quickMeals ? 'checkbox' : 'square-outline'}
+                                size={24}
+                                color="#2196F3"
+                            />
+                            <Text style={styles.checkboxLabel}>Quick Meals (≤30 min)</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Generate Button */}
+                {!mealPlan && (
+                    <TouchableOpacity
+                        style={styles.generateButton}
+                        onPress={handleGeneratePlan}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Ionicons name="sparkles" size={24} color="#fff" />
+                                <Text style={styles.generateButtonText}>Generate Meal Plan</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                )}
+
+                {/* Meal Plan Display */}
+                {mealPlan && (
+                    <View style={styles.mealPlanSection}>
+                        {/* Summary Card */}
+                        <View style={styles.summaryCard}>
+                            <Text style={styles.summaryTitle}>Today's Nutrition</Text>
+                            <View style={styles.summaryRow}>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalCalories}</Text>
+                                    <Text style={styles.summaryLabel}>Calories</Text>
+                                </View>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalProtein}g</Text>
+                                    <Text style={styles.summaryLabel}>Protein</Text>
+                                </View>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalCarbs}g</Text>
+                                    <Text style={styles.summaryLabel}>Carbs</Text>
+                                </View>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryValue}>{mealPlan.totalFat}g</Text>
+                                    <Text style={styles.summaryLabel}>Fat</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Meal Cards */}
+                        {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((mealType) => {
+                            const meal = mealPlan[mealType];
+                            return (
+                                <View key={mealType} style={styles.mealCard}>
+                                    {/* Meal Header */}
+                                    <View style={styles.mealHeader}>
+                                        <View style={styles.mealTitleRow}>
+                                            <Ionicons name={getMealIcon(mealType)} size={24} color="#4CAF50" />
+                                            <Text style={styles.mealType}>
+                                                {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                                            </Text>
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => handleRegenerateMeal(mealType)}
+                                            disabled={loading}
+                                        >
+                                            <Ionicons name="refresh" size={20} color="#2196F3" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* Meal Details */}
+                                    <Text style={styles.mealName}>{meal.nameEn}</Text>
+                                    <Text style={styles.mealNameBangla}>{meal.name}</Text>
+
+                                    <View style={styles.mealNutrition}>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.calories}</Text>
+                                            <Text style={styles.nutritionLabel}>cal</Text>
+                                        </View>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.protein}g</Text>
+                                            <Text style={styles.nutritionLabel}>protein</Text>
+                                        </View>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.carbs}g</Text>
+                                            <Text style={styles.nutritionLabel}>carbs</Text>
+                                        </View>
+                                        <View style={styles.nutritionItem}>
+                                            <Text style={styles.nutritionValue}>{meal.fat}g</Text>
+                                            <Text style={styles.nutritionLabel}>fat</Text>
+                                        </View>
+                                    </View>
+
+                                    <Text style={styles.mealDescription}>{meal.description}</Text>
+
+                                    {/* Tags */}
+                                    <View style={styles.tagsContainer}>
+                                        {meal.tags.slice(0, 3).map((tag) => (
+                                            <View key={tag} style={styles.tag}>
+                                                <Text style={styles.tagText}>{tag}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+                            );
+                        })}
+
+                        {/* Action Buttons */}
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                                style={styles.regenerateAllButton}
+                                onPress={handleRegenerateAll}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="#2196F3" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="refresh-circle" size={20} color="#2196F3" />
+                                        <Text style={styles.regenerateAllText}>Regenerate All</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.saveButton}
+                                onPress={handleSavePlan}
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                                        <Text style={styles.saveButtonText}>Save Plan</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+            </ScrollView>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    container: {
+        flex: 1,
+        backgroundColor: '#F5F5F5',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    backButton: {
+        padding: 8,
+    },
+    title: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    placeholder: {
+        width: 40,
+    },
+    dateSection: {
+        backgroundColor: '#fff',
+        marginHorizontal: 16,
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 12,
+    },
+    dateScroll: {
+        marginTop: 8,
+    },
+    dateButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#E0E0E0',
+        marginRight: 10,
+        backgroundColor: '#fff',
+    },
+    dateButtonActive: {
+        borderColor: '#667eea',
+        backgroundColor: '#F0F3FF',
+    },
+    dateButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+    },
+    dateButtonTextActive: {
+        color: '#667eea',
+    },
+    optionsSection: {
+        backgroundColor: '#fff',
+        margin: 16,
+        padding: 16,
+        borderRadius: 12,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 16,
+    },
+    optionRow: {
+        marginBottom: 16,
+    },
+    optionLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#555',
+        marginBottom: 8,
+    },
+    calorieButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    calorieButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#E0E0E0',
+        alignItems: 'center',
+    },
+    calorieButtonActive: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#E8F5E9',
+    },
+    calorieButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#757575',
+    },
+    calorieButtonTextActive: {
+        color: '#4CAF50',
+    },
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    checkboxLabel: {
+        fontSize: 16,
+        color: '#555',
+    },
+    generateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        backgroundColor: '#4CAF50',
+        marginHorizontal: 16,
+        paddingVertical: 16,
+        borderRadius: 12,
+        marginBottom: 16,
+    },
+    generateButtonText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    mealPlanSection: {
+        padding: 16,
+    },
+    summaryCard: {
+        backgroundColor: '#4CAF50',
+        padding: 20,
+        borderRadius: 12,
+        marginBottom: 16,
+    },
+    summaryTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    summaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    summaryItem: {
+        alignItems: 'center',
+    },
+    summaryValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    summaryLabel: {
+        fontSize: 12,
+        color: '#fff',
+        opacity: 0.9,
+        marginTop: 4,
+    },
+    mealCard: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    mealHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    mealTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    mealType: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#4CAF50',
+        textTransform: 'uppercase',
+    },
+    mealName: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 4,
+    },
+    mealNameBangla: {
+        fontSize: 16,
+        color: '#757575',
+        marginBottom: 12,
+    },
+    mealNutrition: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        backgroundColor: '#F5F5F5',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    nutritionItem: {
+        alignItems: 'center',
+    },
+    nutritionValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    nutritionLabel: {
+        fontSize: 12,
+        color: '#757575',
+        marginTop: 2,
+    },
+    mealDescription: {
+        fontSize: 14,
+        color: '#555',
+        marginBottom: 12,
+        lineHeight: 20,
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    tag: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    tagText: {
+        fontSize: 12,
+        color: '#4CAF50',
+        fontWeight: '500',
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    regenerateAllButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#fff',
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#2196F3',
+    },
+    regenerateAllText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2196F3',
+    },
+    saveButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#4CAF50',
+        paddingVertical: 14,
+        borderRadius: 12,
+    },
+    saveButtonText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+});

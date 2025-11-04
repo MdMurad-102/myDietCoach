@@ -1,23 +1,24 @@
-import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { Slot } from "expo-router";
 import { useState } from "react";
+import { MealTimingProvider } from "../context/MealTimingContext";
+import { ThemeProvider } from "../context/ThemeContext";
+import { MealProvider } from "../context/UnifiedMealContext";
 import { UserContext, UserType } from "../context/UserContext";
-import { Id } from "@/convex/_generated/dataModel";
-
-// Initialize Convex client
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
-  unsavedChangesWarning: false,
-});
 
 export default function RootLayout() {
   const [user, setUser] = useState<UserType>(null);
 
   return (
-    <ConvexProvider client={convex}>
+    <ThemeProvider>
       <UserContext.Provider value={{ user, setUser }}>
-        {/* ✅ Slot will automatically render your nested routes */}
-        <Slot />
+        <MealTimingProvider>
+          <MealProvider>
+            {/* ✅ Slot will automatically render your nested routes */}
+            <Slot />
+          </MealProvider>
+        </MealTimingProvider>
       </UserContext.Provider>
-    </ConvexProvider>
+    </ThemeProvider>
   );
 }
+

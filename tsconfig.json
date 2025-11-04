@@ -19,5 +19,5 @@
     "app/_layout.tsx",
     "app/index.tsx",
     "context/UserContext.tsx"
-  ]
+, "app/BMI/BMI2.js"  ]
 }
